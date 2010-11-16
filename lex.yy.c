@@ -505,11 +505,12 @@ int yy_flex_debug = 0;
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
 char *yytext;
-#line 1 "test.lex"
-#line 2 "test.lex"
+#line 1 "lex.l"
+#line 2 "lex.l"
 #include <stdio.h>
+#define NHASH 1000
 /* regular definitions */
-#line 513 "lex.yy.c"
+#line 514 "lex.yy.c"
 
 #define INITIAL 0
 
@@ -691,10 +692,10 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 15 "test.lex"
+#line 16 "lex.l"
 
 
-#line 698 "lex.yy.c"
+#line 699 "lex.yy.c"
 
 	if ( !(yy_init) )
 		{
@@ -779,14 +780,14 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 17 "test.lex"
+#line 18 "lex.l"
 {
         printf("Keywords: %s\n", yytext);
         }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 20 "test.lex"
+#line 21 "lex.l"
 {
         printf("Predefined syms: %s\n", yytext);
         }
@@ -794,26 +795,26 @@ YY_RULE_SETUP
 case 3:
 /* rule 3 can match eol */
 YY_RULE_SETUP
-#line 23 "test.lex"
+#line 24 "lex.l"
 {}
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 25 "test.lex"
+#line 26 "lex.l"
 {
         printf("integers literals: %s\n", yytext);
         }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 28 "test.lex"
+#line 29 "lex.l"
 {
         printf("string literals: %s\n", yytext);
         }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 31 "test.lex"
+#line 32 "lex.l"
 {
         printf("identifier: %s\n", yytext);
         }
@@ -821,15 +822,15 @@ YY_RULE_SETUP
 case 7:
 /* rule 7 can match eol */
 YY_RULE_SETUP
-#line 34 "test.lex"
+#line 35 "lex.l"
 {}
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 37 "test.lex"
+#line 38 "lex.l"
 ECHO;
 	YY_BREAK
-#line 833 "lex.yy.c"
+#line 834 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1827,7 +1828,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 37 "test.lex"
+#line 38 "lex.l"
 
 
 
@@ -1841,5 +1842,32 @@ main(int argc, char **argv)
         yylex();
         if (yyin != stdin)
                 fclose(yyin);
+}
+
+static unsigned
+symhash(char *sym)
+{
+  unsigned int hash = 0;
+  unsigned c;
+  while(c == *sym++) hash = hash*9 ^ c;
+  return hash
+}
+
+struct symbol *
+lookup(char* sym)
+{
+  struct symbol *sp = &symtab[symhash(sym)%NHASH];
+  int scount = NHASH;
+  while(--scount >= 0) {
+    if(sp->name && !strcmp(sp->name, sym)) return sp;
+    if(!sp->name) {
+      sp->name = strdup(sym);
+      sp->reflist = 0;
+      return sp;
+    }
+    if(++sp >= symtab + NHASH) sp = symtab;
+  }
+  fputs("symbol table overflow\n", stderr);
+  abort();
 }
 
