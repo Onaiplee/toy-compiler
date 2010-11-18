@@ -1,6 +1,9 @@
 %{
 #include <stdio.h>
+#include <stdlib.h>
+#include "y.tab.h"
 #define NHASH 1000
+void yyerror(char *);
 %}
 
 /* regular definitions */
@@ -8,46 +11,69 @@ ID      {letter}({letter}|{digit}|[_])*
 INT     {digit}+
 STR     \"[^\n"]*\"
 WS      [ \t\n]+
-SYM     [+-=<>.,:;\(\)\[\]]|"<>"|">="|"<="|".."|"*"|":="
+SYM     [+-=<>.,:;\(\)\[\]]|"*"
 digit   [0-9]
 letter  [a-z]
 CMT     \{[^\{\}]*\}
 
 %%
 
-and|begin|forward|div|do|else|end|for|function|if|array|mod|not|of|or|procedure|program|record|then|to|type|var|while   {
-        printf("Keywords: %s\n", yytext);
-        }
-{SYM}   {
-        printf("Predefined syms: %s\n", yytext);
-        }
-{WS}    {}
+and       {return (AND);       }
+begin     {return (BEGIN);     }
+forward   {return (FORWARD);   }
+div       {return (DIV);       }
+do        {return (DO);        }
+else      {return (ELSE);      } 
+end       {return (END);       }
+for       {return (FOR);       }
+function  {return (FUNCTION);  }
+if        {return (IF);        }
+array     {return (ARRAY);     }
+mod       {return (MOD);       }
+not       {return (NOT);       }
+of        {return (OF);        }
+or        {return (OR);        }
+procedure {return (PROCEDURE); }
+program   {return (PROGRAM);   }
+record    {return (RECORD);    }
+then      {return (THEN);      }
+to        {return (TO);        }
+type      {return (TYPE);      }
+var       {return (VAR);       }
+while     {return (WHILE);     }
 
-{INT}   {
-        printf("integers literals: %s\n", yytext);
-        }
-{STR}   {
-        printf("string literals: %s\n", yytext);
-        }
-{ID}    {
-        printf("identifier: %s\n", yytext);
-        }
-{CMT}   {}
+"<>"      {return (NE);        }
+"<="      {return (LT);        }
+">="      {return (GT);        }
+".."      {return (RG);        }
+":="      {return (ASN);       }
+
+
+{SYM}     {return *yytext;     }
+{WS}      {                    }
+{INT}     {return (INTEGER);   }
+{STR}     {return (STRING);       }
+{ID}      {return (ID);        }
+{CMT}     {                    }
 
 
 %%
 
-main(int argc, char **argv)
-{
-        ++argv, --argc;
-        if (argc > 0)
-                yyin = fopen(argv[0], "r");
-        else
-                yyin = stdin;
-        yylex();
-        if (yyin != stdin)
-                fclose(yyin);
+int yywrap(void) {
+    return 1;
 }
+
+//main(int argc, char **argv)
+//{
+//        ++argv, --argc;
+//        if (argc > 0)
+//                yyin = fopen(argv[0], "r");
+//        else
+//                yyin = stdin;
+//        yylex();
+//        if (yyin != stdin)
+//                fclose(yyin);
+//}
 
 static unsigned
 symhash(char *sym)
