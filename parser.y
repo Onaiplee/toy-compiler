@@ -13,6 +13,7 @@ extern FILE *yyin;
 extern FILE *yyout;
 extern struct symbol symtab[NENTRY];
 extern int pointer;
+FILE *rule_fp = NULL;
 %}
 
 /* declare tokens */
@@ -33,22 +34,12 @@ extern int pointer;
 
 Program: PROGRAM ID ';' TypeDefinitions VariableDeclarations
 
-                 SubprogramDeclarations CompoundStatement '.' {printf("Program\n")};
-
-//TypeDefinitions_X:
-                 /* empty */
-//                 | TypeDefinitions {printf("TypeDefinitions_X\n");}
-//                 ;
-
-/*SubprogramDeclarations_X: */
-                        /* empty */
-                        /* | SubprogramDeclarations {printf("SubprogramDeclarations_X\n");} */
-                        /*; */
+                 SubprogramDeclarations CompoundStatement '.' {fprintf(rule_fp, "Program\n");};
 
 
 TypeDefinitions: 
                /* empty */
-               | TYPE TypeDefinition ';' TypeDefinition_X {printf("TypeDefinitions\n");};
+               | TYPE TypeDefinition ';' TypeDefinition_X {fprintf(rule_fp, "TypeDefinitions\n");};
                ;
 
 TypeDefinition_X: 
@@ -56,12 +47,10 @@ TypeDefinition_X:
                 | TypeDefinition_X TypeDefinition ';' {}
                 ;
 
-//TypeDefinition_E: TypeDefinition ';' {printf("TypeDefinition_E\n");};
-
 
 VariableDeclarations:
                     /* empty */
-                    | VAR VariableDeclaration ';' VariableDeclarations_X {printf("VariableDeclarations\n");};
+                    | VAR VariableDeclaration ';' VariableDeclarations_X {fprintf(rule_fp, "VariableDeclarations\n");};
 
 VariableDeclarations_X:
                      /* empty */
@@ -69,34 +58,30 @@ VariableDeclarations_X:
                      ;
 
 
-/* SubprogramDeclarations: SubprogramDeclarations_Y {printf("SubprogramDeclarations\n");}; */
-
-/* SubprogramDeclarations: SubprogramDeclarations_Y_L {printf("SubprogramDeclarations\n");}; */
 SubprogramDeclarations:
                       /* empty */
-                      | SubprogramDeclarations ProFunDeclarationGroup ';' {printf("SubprogramDeclarations\n");}
+                      | SubprogramDeclarations ProFunDeclarationGroup ';' {fprintf(rule_fp, "SubprogramDeclarations\n");}
                       ;
 
-/*SubprogramDeclarations_E: ProFunDeclarationGroup ';' {printf("SubprogramDeclarations_E\n");}; */
 
 ProFunDeclarationGroup: ProcedureDeclaration {}
                       | FunctionDeclaration {}
                       ;
 
-TypeDefinition: ID '=' Type {printf("TypeDefinition\n");};
+TypeDefinition: ID '=' Type {fprintf(rule_fp, "TypeDefinition\n");};
 
 
-VariableDeclaration: IdentifierList ':' Type {printf("VariableDeclaration\n");};
+VariableDeclaration: IdentifierList ':' Type {fprintf(rule_fp, "VariableDeclaration\n");};
 
-ProcedureDeclaration: PROCEDURE ID '(' FormalParameterList ')' ';' BlockforwardGroup {printf("ProcedureDeclaration\n");};
-FunctionDeclaration: FUNCTION ID '(' FormalParameterList ')' ':' ResultType ';' BlockforwardGroup {printf("FunctionDeclaration\n");};
+ProcedureDeclaration: PROCEDURE ID '(' FormalParameterList ')' ';' BlockforwardGroup {fprintf(rule_fp, "ProcedureDeclaration\n");};
+FunctionDeclaration: FUNCTION ID '(' FormalParameterList ')' ':' ResultType ';' BlockforwardGroup {fprintf(rule_fp, "FunctionDeclaration\n");};
 
 BlockforwardGroup: Block | FORWARD {};
 
 
 FormalParameterList:
                    /* empty */
-                   | FormalParameterList_E {printf("FormalParameterList\n");}
+                   | FormalParameterList_E {fprintf(rule_fp, "FormalParameterList\n");}
                    ;
 
 FormalParameterList_E: IdentifierList ':' Type IdlistType_X {};
@@ -106,142 +91,125 @@ IdlistType_X:
             | IdlistType_X ';' IdentifierList ':' Type {}
             ;
 
-//IdlistType_E: ';' IdentifierList ':' Type {printf("IdlistType_E\n");};
 
-Block: VariableDeclarations CompoundStatement {printf("Block\n");};
+Block: VariableDeclarations CompoundStatement {fprintf(rule_fp, "Block\n");};
 
-//VariableDeclarations_X:
-    /* empty */
-//    | VariableDeclarations {printf("VariableDeclarations_X\n");}
-//    ;
 
-CompoundStatement: begin StatementSequence END {printf("CompoundStatement\n");};
-StatementSequence: Statement StatementSequence_X {printf("StatementSequence\n");};
-//StatementSequence_X: StatementSequence_X_L {printf("StatementSequence_X\n");};
+CompoundStatement: begin StatementSequence END {fprintf(rule_fp, "CompoundStatement\n");};
+StatementSequence: Statement StatementSequence_X {fprintf(rule_fp, "StatementSequence\n");};
 StatementSequence_X:
                    /* empty */
                    | StatementSequence_X ';' Statement {}
                    ;
 
-//StatementSequence_E: ';' Statement {printf("StatementSequence_E\n");};
 
-Statement: SimpleStatement {printf("Statement\n");}
-         | StructuredStatement {printf("Statement\n");}
+Statement: SimpleStatement {fprintf(rule_fp, "Statement\n");}
+         | StructuredStatement {fprintf(rule_fp, "Statement\n");}
          ;
 
 
 
 SimpleStatement:
                /* empty */
-               | Assignment_Statement {printf("SimpleStatement\n");}
-               | ProcedureStatement {printf("Simplestatement\n");}
+               | Assignment_Statement {fprintf(rule_fp, "SimpleStatement\n");}
+               | ProcedureStatement {fprintf(rule_fp, "Simplestatement\n");}
                ;
 
-//SimpleStatement_E: Assignment_Statement | ProcedureStatement {printf("SimpleStatement_E\n");};
 
-Assignment_Statement: Variable CE Expression {printf("Assignment_Statement\n");};
+Assignment_Statement: Variable CE Expression {fprintf(rule_fp, "Assignment_Statement\n");};
 
-ProcedureStatement: ID '(' ActualParameterList ')' {printf("ProcedureStatement\n");};
+ProcedureStatement: ID '(' ActualParameterList ')' {fprintf(rule_fp, "ProcedureStatement\n");};
 
-StructuredStatement: MatchedStatement {printf("StructuredStatement\n");}
-                   | OpenStatement {printf("StructuredStatement\n");}
+StructuredStatement: MatchedStatement {fprintf(rule_fp, "StructuredStatement\n");}
+                   | OpenStatement {fprintf(rule_fp, "StructuredStatement\n");}
                    ;
 
-MatchedStatement: IF Expression THEN MatchedStatement ELSE MatchedStatement {printf("MatchedStatement\n");}
-                | CompoundStatement {printf("MatchedStatement\n");}
-                | WHILE Expression DO MatchedStatement {printf("MatchedStatement\n");}
-                | FOR ID CE Expression TO Expression DO MatchedStatement {printf("MatchedStatement\n");}
+MatchedStatement: IF Expression THEN MatchedStatement ELSE MatchedStatement {fprintf(rule_fp, "MatchedStatement\n");}
+                | CompoundStatement {fprintf(rule_fp, "MatchedStatement\n");}
+                | WHILE Expression DO MatchedStatement {fprintf(rule_fp, "MatchedStatement\n");}
+                | FOR ID CE Expression TO Expression DO MatchedStatement {fprintf(rule_fp, "MatchedStatement\n");}
                 ;
 
-OpenStatement: IF Expression THEN StructuredStatement {printf("OpenStatement\n");}
-             | IF Expression THEN MatchedStatement ELSE OpenStatement {printf("OpenStatement\n");}
-             | WHILE Expression DO OpenStatement {printf("OpenStatement\n");}
-             | FOR ID CE Expression TO Expression DO OpenStatement {printf("OpenStatement\n");}
+OpenStatement: IF Expression THEN StructuredStatement {fprintf(rule_fp, "OpenStatement\n");}
+             | IF Expression THEN MatchedStatement ELSE OpenStatement {fprintf(rule_fp, "OpenStatement\n");}
+             | WHILE Expression DO OpenStatement {fprintf(rule_fp, "OpenStatement\n");}
+             | FOR ID CE Expression TO Expression DO OpenStatement {fprintf(rule_fp, "OpenStatement\n");}
              ;
 
-Type: ID {printf("Type\n");}
-    | ARRAY '[' Constant RG Constant ']' OF Type {printf("Type\n");}
-    | RECORD Field_List END {printf("Type\n");}
+Type: ID {fprintf(rule_fp, "Type\n");}
+    | ARRAY '[' Constant RG Constant ']' OF Type {fprintf(rule_fp, "Type\n");}
+    | RECORD Field_List END {fprintf(rule_fp, "Type\n");}
     ;
 
-ResultType: ID {printf("ResultType\n");};
+ResultType: ID {fprintf(rule_fp, "ResultType\n");};
 Field_List:
     /* empty */
-    | IdentifierList ':' Type IdlistType_X {printf("Field_List\n");}
+    | IdentifierList ':' Type IdlistType_X {fprintf(rule_fp, "Field_List\n");}
     ;
 
-//Field_List_E: IdentifierList ':' Type IdlistType_X {printf("Field_List_E\n");};
 
-Constant: INTEGER {printf("Constant\n");}
-    | Sign INTEGER {printf("Constant\n");}
+Constant: INTEGER {fprintf(rule_fp, "Constant\n");}
+    | Sign INTEGER {fprintf(rule_fp, "Constant\n");}
     ;
-Expression: Simple_Expression {printf("Expression\n");}
-    | Simple_Expression Relational_Op Simple_Expression {printf("Expression\n");}
-    ;
-
-Relational_Op: '<' | LT | '>' | GT | NE | '=' {printf("Relational_Op\n");}
-Simple_Expression: Term AddopTerm_X {printf("Simple_Expression\n");}
-    | Sign Term AddopTerm_X {printf("Simple_Expression\n");}
+Expression: Simple_Expression {fprintf(rule_fp, "Expression\n");}
+    | Simple_Expression Relational_Op Simple_Expression {fprintf(rule_fp, "Expression\n");}
     ;
 
-//AddopTerm_X: AddopTerm_X_L {printf("AddopTerm_X\n");};
+Relational_Op: '<' | LT | '>' | GT | NE | '=' {fprintf(rule_fp, "Relational_Op\n");}
+Simple_Expression: Term AddopTerm_X {fprintf(rule_fp, "Simple_Expression\n");}
+    | Sign Term AddopTerm_X {fprintf(rule_fp, "Simple_Expression\n");}
+    ;
+
 AddopTerm_X:
            /* empty */
            | AddopTerm_X AddOp Term {}
            ;
 
-//AddopTerm_E: AddOp Term {printf("AddopTerm_E\n");};
-AddOp: '+' | '-' | OR {printf("AddOp\n");};
+AddOp: '+' | '-' | OR {fprintf(rule_fp, "AddOp\n");};
 
-Term: Factor MulOpFactor_X {printf("Term\n");};
+Term: Factor MulOpFactor_X {fprintf(rule_fp, "Term\n");};
 
-//MulOpFactor_X: MulOpFactor_X_L {printf("MulOpFactor_X\n");};
 MulOpFactor_X:
              /* empty */
              | MulOpFactor_X MulOp Factor {}
              ;
 
-//MulOpFactor_E: MulOp Factor {printf("MulOpFactor_E\n");};
-MulOp: '*' | DIV | MOD | AND {printf("MulOp\n");};
+MulOp: '*' | DIV | MOD | AND {fprintf(rule_fp, "MulOp\n");};
 Factor:
-        INTEGER {printf("Factor\n");}
-      | STRING {printf("Factor\n");}
-      | Variable {printf("Factor\n");}
-      | Function_Reference {printf("Factor\n");}
-      | NOT Factor {printf("Factor\n");}
-      | '(' Expression ')' {printf("Factor\n");}
+        INTEGER {fprintf(rule_fp, "Factor\n");}
+      | STRING {fprintf(rule_fp, "Factor\n");}
+      | Variable {fprintf(rule_fp, "Factor\n");}
+      | Function_Reference {fprintf(rule_fp, "Factor\n");}
+      | NOT Factor {fprintf(rule_fp, "Factor\n");}
+      | '(' Expression ')' {fprintf(rule_fp, "Factor\n");}
       ;
 
-Function_Reference: ID '(' ActualParameterList ')' {printf("Function_Reference\n");};
-Variable: ID ComponentSelection {printf("Variable\n");};
+Function_Reference: ID '(' ActualParameterList ')' {fprintf(rule_fp, "Function_Reference\n");};
+Variable: ID ComponentSelection {fprintf(rule_fp, "Variable\n");};
 ComponentSelection:
                   /* empty */
-                  | '.' ID ComponentSelection {printf("ComponentSelection\n");}
-                  | '[' Expression ']' ComponentSelection {printf("ComponentSelection\n");}
+                  | '.' ID ComponentSelection {fprintf(rule_fp, "ComponentSelection\n");}
+                  | '[' Expression ']' ComponentSelection {fprintf(rule_fp, "ComponentSelection\n");}
                   ;
 
 ActualParameterList:
                    /* empty */
-                   | Expression Expression_X {printf("ActualParameterList\n");}
+                   | Expression Expression_X {fprintf(rule_fp, "ActualParameterList\n");}
                    ;
-//Expression_X: Expression_X_L {printf("Expression_X\n");};
 Expression_X:
             /* empty */
             | Expression_X ',' Expression  {}
             ;
 
-//Expression_E: ',' Expression {printf("Expression_E\n");};
-IdentifierList: ID Id_X {printf("IdentifierList\n");};
-//Id_X: Id_X_L {printf("Id_X\n");};
+IdentifierList: ID Id_X {fprintf(rule_fp, "IdentifierList\n");};
 Id_X:
     /* empty */
     | Id_X ',' ID {}
     ;
 
-//Id_E: ',' ID {printf("Id_E\n");};
 Sign: 
-      '+' {printf("Sign\n");}
-    | '-' {printf("Sign\n");}
+      '+' {fprintf(rule_fp, "Sign\n");}
+    | '-' {fprintf(rule_fp, "Sign\n");}
     ;
 
 %%
@@ -254,7 +222,7 @@ main(int argc, char **argv)
       return;
   }
   yyin = fopen(argv[1], "r");
-  freopen(argv[2], "a", stdout);
+  rule_fp = fopen(argv[2], "w");
   FILE *sym_fp = fopen(argv[3], "w");
   yyparse();
   for (i = 0; i < pointer; i++) {
@@ -262,6 +230,7 @@ main(int argc, char **argv)
   }
   fclose(yyin);
   fclose(sym_fp);
+  fclose(rule_fp);
   return 0;
 }
 
