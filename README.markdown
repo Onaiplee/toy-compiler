@@ -10,7 +10,6 @@ Usage:
 </code>
 
 You can run
-
 <code>
     make clean
 </code>
