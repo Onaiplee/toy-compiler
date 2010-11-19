@@ -48,7 +48,7 @@
      RG = 264,
      CE = 265,
      AND = 266,
-     BEGIN = 267,
+     begin = 267,
      FORWARD = 268,
      DIV = 269,
      DO = 270,
@@ -82,7 +82,7 @@
 #define RG 264
 #define CE 265
 #define AND 266
-#define BEGIN 267
+#define begin 267
 #define FORWARD 268
 #define DIV 269
 #define DO 270
