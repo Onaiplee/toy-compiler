@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include "parser.tab.h"
 #define NHASH 1000
-//void yyerror(char *);
+void yyerror(char *);
 %}
 
 /* regular definitions */

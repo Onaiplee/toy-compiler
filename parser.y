@@ -2,11 +2,13 @@
 
 %{
 #include <stdio.h>
+#include <stdarg.h>
 #include <ctype.h>
 #include "parser.tab.h"
 #define YYDEBUG 1
 #define YYLINENO
 int yylex(void);
+extern FILE *yyin;
 %}
 
 /* declare tokens */
@@ -29,7 +31,7 @@ int yylex(void);
 
 Program: PROGRAM ID ';' TypeDefinitions VariableDeclarations
 
-                 SubprogramDeclarations CompoundStatement '.' {printf("Program!\n")};
+                 SubprogramDeclarations CompoundStatement '.' {printf("Program\n")};
 
 //TypeDefinitions_X:
                  /* empty */
@@ -49,7 +51,7 @@ TypeDefinitions:
 
 TypeDefinition_X: 
                 /* empty */
-                | TypeDefinition_X TypeDefinition ';' {printf("TypeDefinition_X\n");}
+                | TypeDefinition_X TypeDefinition ';' {}
                 ;
 
 //TypeDefinition_E: TypeDefinition ';' {printf("TypeDefinition_E\n");};
@@ -61,7 +63,7 @@ VariableDeclarations:
 
 VariableDeclarations_X:
                      /* empty */
-                     | VariableDeclarations_X VariableDeclaration ';'  {printf("VariableDeclaration_X\n");}
+                     | VariableDeclarations_X VariableDeclaration ';'  {}
                      ;
 
 
@@ -75,8 +77,8 @@ SubprogramDeclarations:
 
 /*SubprogramDeclarations_E: ProFunDeclarationGroup ';' {printf("SubprogramDeclarations_E\n");}; */
 
-ProFunDeclarationGroup: ProcedureDeclaration {printf("ProFunDeclarationGroup\n");}
-                      | FunctionDeclaration {printf("ProFunDeclarationGroup\n");}
+ProFunDeclarationGroup: ProcedureDeclaration {}
+                      | FunctionDeclaration {}
                       ;
 
 TypeDefinition: ID '=' Type {printf("TypeDefinition\n");};
@@ -87,19 +89,19 @@ VariableDeclaration: IdentifierList ':' Type {printf("VariableDeclaration\n");};
 ProcedureDeclaration: PROCEDURE ID '(' FormalParameterList ')' ';' BlockforwardGroup {printf("ProcedureDeclaration\n");};
 FunctionDeclaration: FUNCTION ID '(' FormalParameterList ')' ':' ResultType ';' BlockforwardGroup {printf("FunctionDeclaration\n");};
 
-BlockforwardGroup: Block | FORWARD {printf("BlockforwardGroup\n");};
+BlockforwardGroup: Block | FORWARD {};
 
 
 FormalParameterList:
-    /* empty */
-    | FormalParameterList_E {printf("FormalParameterList\n");}
-    ;
+                   /* empty */
+                   | FormalParameterList_E {printf("FormalParameterList\n");}
+                   ;
 
-FormalParameterList_E: IdentifierList ':' Type IdlistType_X {printf("FormalParameterList_E\n");};
+FormalParameterList_E: IdentifierList ':' Type IdlistType_X {};
 
 IdlistType_X:
             /* empty */
-            | IdlistType_X ';' IdentifierList ':' Type {printf("IdlistType_X_L\n");}
+            | IdlistType_X ';' IdentifierList ':' Type {}
             ;
 
 //IdlistType_E: ';' IdentifierList ':' Type {printf("IdlistType_E\n");};
@@ -116,19 +118,22 @@ StatementSequence: Statement StatementSequence_X {printf("StatementSequence\n");
 //StatementSequence_X: StatementSequence_X_L {printf("StatementSequence_X\n");};
 StatementSequence_X:
                    /* empty */
-                   | StatementSequence_X ';' Statement {printf("StatementSequence_X\n");}
+                   | StatementSequence_X ';' Statement {}
                    ;
 
 //StatementSequence_E: ';' Statement {printf("StatementSequence_E\n");};
 
-Statement: SimpleStatement | StructuredStatement {printf("Statement\n");};
+Statement: SimpleStatement {printf("Statement\n");}
+         | StructuredStatement {printf("Statement\n");}
+         ;
+
 
 
 SimpleStatement:
-    /* empty */
-    | Assignment_Statement {printf("SimpleStatement\n");}
-    | ProcedureStatement {printf("Simplestatement\n");}
-    ;
+               /* empty */
+               | Assignment_Statement {printf("SimpleStatement\n");}
+               | ProcedureStatement {printf("Simplestatement\n");}
+               ;
 
 //SimpleStatement_E: Assignment_Statement | ProcedureStatement {printf("SimpleStatement_E\n");};
 
@@ -152,7 +157,7 @@ OpenStatement: IF Expression THEN StructuredStatement {printf("OpenStatement\n")
              | FOR ID CE Expression TO Expression DO OpenStatement {printf("OpenStatement\n");}
              ;
 
-Type: ID
+Type: ID {printf("Type\n");}
     | ARRAY '[' Constant RG Constant ']' OF Type {printf("Type\n");}
     | RECORD Field_List END {printf("Type\n");}
     ;
@@ -180,7 +185,7 @@ Simple_Expression: Term AddopTerm_X {printf("Simple_Expression\n");}
 //AddopTerm_X: AddopTerm_X_L {printf("AddopTerm_X\n");};
 AddopTerm_X:
            /* empty */
-           | AddopTerm_X AddOp Term {printf("AddopTerm_X_L\n");}
+           | AddopTerm_X AddOp Term {}
            ;
 
 //AddopTerm_E: AddOp Term {printf("AddopTerm_E\n");};
@@ -191,18 +196,26 @@ Term: Factor MulOpFactor_X {printf("Term\n");};
 //MulOpFactor_X: MulOpFactor_X_L {printf("MulOpFactor_X\n");};
 MulOpFactor_X:
              /* empty */
-             | MulOpFactor_X MulOp Factor {printf("MulOpFactor_X_L\n");}
+             | MulOpFactor_X MulOp Factor {}
              ;
 
 //MulOpFactor_E: MulOp Factor {printf("MulOpFactor_E\n");};
 MulOp: '*' | DIV | MOD | AND {printf("MulOp\n");};
-Factor: INTEGER | STRING | Variable | Function_Reference | NOT Factor | '(' Expression ')' {printf("Factor\n");};
+Factor:
+        INTEGER {printf("Factor\n");}
+      | STRING {printf("Factor\n");}
+      | Variable {printf("Factor\n");}
+      | Function_Reference {printf("Factor\n");}
+      | NOT Factor {printf("Factor\n");}
+      | '(' Expression ')' {printf("Factor\n");}
+      ;
+
 Function_Reference: ID '(' ActualParameterList ')' {printf("Function_Reference\n");};
 Variable: ID ComponentSelection {printf("Variable\n");};
 ComponentSelection:
                   /* empty */
-                  | '.' ID ComponentSelection {printf("ComponentSelectionGroup\n");}
-                  | '[' Expression ']' ComponentSelection {printf("ComponentSelectionGroup\n");}
+                  | '.' ID ComponentSelection {printf("ComponentSelection\n");}
+                  | '[' Expression ']' ComponentSelection {printf("ComponentSelection\n");}
                   ;
 
 ActualParameterList:
@@ -212,7 +225,7 @@ ActualParameterList:
 //Expression_X: Expression_X_L {printf("Expression_X\n");};
 Expression_X:
             /* empty */
-            | Expression_X ',' Expression  {printf("Expression_X_L\n");}
+            | Expression_X ',' Expression  {}
             ;
 
 //Expression_E: ',' Expression {printf("Expression_E\n");};
@@ -220,25 +233,30 @@ IdentifierList: ID Id_X {printf("IdentifierList\n");};
 //Id_X: Id_X_L {printf("Id_X\n");};
 Id_X:
     /* empty */
-    | Id_X ',' ID {printf("Id_X\n");}
+    | Id_X ',' ID {}
     ;
 
 //Id_E: ',' ID {printf("Id_E\n");};
-Sign: '+' | '-' {printf("Sign\n");};
+Sign: 
+      '+' {printf("Sign\n");}
+    | '-' {printf("Sign\n");}
+    ;
 
 %%
 
 main(int argc, char **argv)
 {
-  if (argc <= 1) {
-      printf("Usage: parse [source file] [rules.out] [symtable.out]\n");
+  if (argc != 3) {
+      printf("Usage: ./parse [source file] [rules.out] [symtable.out]\n");
+      return;
   }
-  //++argv, --argc;
-  //if (argc > 0)
-  //  yyin = fopen(argv[0], "r");
-  //else
-  //  yyin = stdin;
+  yyin = fopen(argv[1], "r");
+  FILE *rule_fp = fopen(argv[2], "a");
+  //FILE *sym_fp = fopen(argv[3], "a");
   yyparse();
+  fclose(yyin);
+  fclose(rule_fp);
+  //fclose(sym_fp);
   return 0;
 }
 
