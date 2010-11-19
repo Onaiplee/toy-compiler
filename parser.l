@@ -1,9 +1,9 @@
 %{
 #include <stdio.h>
 #include <stdlib.h>
-#include "y.tab.h"
+#include "parser.tab.h"
 #define NHASH 1000
-void yyerror(char *);
+//void yyerror(char *);
 %}
 
 /* regular definitions */
@@ -46,7 +46,7 @@ while     {return (WHILE);     }
 "<="      {return (LT);        }
 ">="      {return (GT);        }
 ".."      {return (RG);        }
-":="      {return (ASN);       }
+":="      {return (CE);       }
 
 
 {SYM}     {return *yytext;     }
@@ -75,29 +75,29 @@ int yywrap(void) {
 //                fclose(yyin);
 //}
 
-static unsigned
-symhash(char *sym)
-{
-  unsigned int hash = 0;
-  unsigned c;
-  while(c == *sym++) hash = hash*9 ^ c;
-  return hash
-}
-
-struct symbol *
-lookup(char* sym)
-{
-  struct symbol *sp = &symtab[symhash(sym)%NHASH];
-  int scount = NHASH;
-  while(--scount >= 0) {
-    if(sp->name && !strcmp(sp->name, sym)) return sp;
-    if(!sp->name) {
-      sp->name = strdup(sym);
-      sp->reflist = 0;
-      return sp;
-    }
-    if(++sp >= symtab + NHASH) sp = symtab;
-  }
-  fputs("symbol table overflow\n", stderr);
-  abort();
-}
+//static unsigned
+//symhash(char *sym)
+//{
+//  unsigned int hash = 0;
+//  unsigned c;
+//  while(c == *sym++) hash = hash*9 ^ c;
+//  return hash
+//}
+//
+//struct symbol *
+//lookup(char* sym)
+//{
+//  struct symbol *sp = &symtab[symhash(sym)%NHASH];
+//  int scount = NHASH;
+//  while(--scount >= 0) {
+//    if(sp->name && !strcmp(sp->name, sym)) return sp;
+//    if(!sp->name) {
+//      sp->name = strdup(sym);
+//      sp->reflist = 0;
+//      return sp;
+//    }
+//    if(++sp >= symtab + NHASH) sp = symtab;
+//  }
+//  fputs("symbol table overflow\n", stderr);
+//  abort();
+//}
