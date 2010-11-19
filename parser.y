@@ -5,25 +5,27 @@
 #include <stdarg.h>
 #include <ctype.h>
 #include "parser.tab.h"
+#include "parser.h"
 #define YYDEBUG 1
 #define YYLINENO
 int yylex(void);
 extern FILE *yyin;
+extern FILE *yyout;
+extern struct symbol symtab[NENTRY];
+extern int pointer;
 %}
 
 /* declare tokens */
 
 %token INTEGER STRING
-%token ID
+%token <iIndex> ID
 %token LT GT NE RG CE
 %token AND begin FORWARD DIV DO ELSE END FOR FUNCTION IF ARRAY MOD
 %token PROCEDURE OR OF NOT PROGRAM RECORD THEN TO TYPE VAR WHILE
 
-//%union {
-//    int iValue;
-//    char sIndex;
-//    nodeType *nPtr;
-//};
+%union {
+    int iIndex;
+};
 
 
 %start Program
@@ -246,17 +248,20 @@ Sign:
 
 main(int argc, char **argv)
 {
-  if (argc != 3) {
+  int i = 0;
+  if (argc != 4) {
       printf("Usage: ./parse [source file] [rules.out] [symtable.out]\n");
       return;
   }
   yyin = fopen(argv[1], "r");
-  FILE *rule_fp = fopen(argv[2], "a");
-  //FILE *sym_fp = fopen(argv[3], "a");
+  freopen(argv[2], "a", stdout);
+  FILE *sym_fp = fopen(argv[3], "w");
   yyparse();
+  for (i = 0; i < pointer; i++) {
+    fprintf(sym_fp, "%s\n", symtab[i].name);
+  }
   fclose(yyin);
-  fclose(rule_fp);
-  //fclose(sym_fp);
+  fclose(sym_fp);
   return 0;
 }
 

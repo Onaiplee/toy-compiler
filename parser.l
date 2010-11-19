@@ -2,7 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "parser.tab.h"
-#define NHASH 1000
+#include "parser.h"
+int pointer = 0;
+struct symbol symtab[NENTRY];
+int lookup(char *);
 void yyerror(char *);
 %}
 
@@ -18,42 +21,42 @@ CMT     \{[^\{\}]*\}
 
 %%
 
-and       {printf("AND\n"); return (AND);}
-begin     {printf("BEGIN\n"); return (begin);}
-forward   {printf("FORWARD\n"); return (FORWARD);}
-div       {printf("DIV\n"); return (DIV);}
-do        {printf("DO\n"); return (DO);}
-else      {printf("ELSE\n"); return (ELSE);}
-end       {printf("END\n"); return (END);}
-for       {printf("FOR\n"); return (FOR);}
-function  {printf("FUNCTION\n"); return (FUNCTION);}
-if        {printf("IF\n"); return (IF);}
-array     {printf("ARRAY\n"); return (ARRAY);}
-mod       {printf("MOD\n"); return (MOD);}
-not       {printf("NOT\n"); return (NOT);}
-of        {printf("OF\n"); return (OF);}
-or        {printf("OR\n"); return (OR);}
-procedure {printf("PROCEDURE\n"); return (PROCEDURE);}
-program   {printf("PROGRAM\n"); return (PROGRAM);}
-record    {printf("RECORD\n"); return (RECORD);}
-then      {printf("THEN\n"); return (THEN);}
-to        {printf("TO\n"); return (TO);}
-type      {printf("TYPE\n"); return (TYPE);}
-var       {printf("VAR\n"); return (VAR);}
-while     {printf("WHILE\n"); return (WHILE);}
+and       {return (AND);}
+begin     {return (begin);}
+forward   {return (FORWARD);}
+div       {return (DIV);}
+do        {return (DO);}
+else      {return (ELSE);}
+end       {return (END);}
+for       {return (FOR);}
+function  {return (FUNCTION);}
+if        {return (IF);}
+array     {return (ARRAY);}
+mod       {return (MOD);}
+not       {return (NOT);}
+of        {return (OF);}
+or        {return (OR);}
+procedure {return (PROCEDURE);}
+program   {return (PROGRAM);}
+record    {return (RECORD);}
+then      {return (THEN);}
+to        {return (TO);}
+type      {return (TYPE);}
+var       {return (VAR);}
+while     {return (WHILE);}
 
-"<>"      {printf("NE\n"); return (NE);}
-"<="      {printf("LT\n"); return (LT);}
-">="      {printf("GT\n"); return (GT);}
-".."      {printf("RG\n"); return (RG);}
-":="      {printf("CE\n"); return (CE);}
+"<>"      {return (NE);}
+"<="      {return (LT);}
+">="      {return (GT);}
+".."      {return (RG);}
+":="      {return (CE);}
 
 
 {WS}      {                    }
-{INT}     {printf("INT: %s\n", yytext);  return (INTEGER);}
-{STR}     {printf("STR: %s\n", yytext);  return (STRING);}
-{ID}      {printf("ID: %s\n", yytext);   return (ID);}
-{SYM}     {printf("SYM: %s\n", yytext);  return *yytext;}
+{INT}     {return (INTEGER);}
+{STR}     {return (STRING);}
+{ID}      {yylval.iIndex = lookup(yytext); return (ID);}
+{SYM}     {return *yytext;}
 {CMT}     {                    }
 
 
@@ -61,6 +64,23 @@ while     {printf("WHILE\n"); return (WHILE);}
 
 int yywrap(void) {
     return 1;
+}
+
+
+int
+lookup(char *name)
+{
+  int i;
+  int index = 0;
+  for (i = 0; i < pointer; i++) {
+    if (!strcmp(name, symtab[i].name)) {
+      return i;
+    }
+  }
+  strcpy(symtab[pointer].name, name);
+  index = pointer++;
+  if (index != 0)
+    return index;
 }
 
 //main(int argc, char **argv)
