@@ -103,8 +103,8 @@ StatementSequence_X:
                    ;
 
 
-Statement: SimpleStatement {fprintf(rule_fp, "Statement\n");}
-         | StructuredStatement {fprintf(rule_fp, "Statement\n");}
+Statement: OpenStatement {fprintf(rule_fp, "Statement\n");}
+         | MatchedStatement {fprintf(rule_fp, "Statement\n");}
          ;
 
 
@@ -112,7 +112,7 @@ Statement: SimpleStatement {fprintf(rule_fp, "Statement\n");}
 SimpleStatement:
                /* empty */
                | Assignment_Statement {fprintf(rule_fp, "SimpleStatement\n");}
-               | ProcedureStatement {fprintf(rule_fp, "Simplestatement\n");}
+               | ProcedureStatement {fprintf(rule_fp, "SimpleStatement\n");}
                ;
 
 
@@ -120,17 +120,18 @@ Assignment_Statement: Variable CE Expression {fprintf(rule_fp, "Assignment_State
 
 ProcedureStatement: ID '(' ActualParameterList ')' {fprintf(rule_fp, "ProcedureStatement\n");};
 
-StructuredStatement: MatchedStatement {fprintf(rule_fp, "StructuredStatement\n");}
+/* StructuredStatement: MatchedStatement {fprintf(rule_fp, "StructuredStatement\n");}
                    | OpenStatement {fprintf(rule_fp, "StructuredStatement\n");}
-                   ;
+                   ; */
 
 MatchedStatement: IF Expression THEN MatchedStatement ELSE MatchedStatement {fprintf(rule_fp, "MatchedStatement\n");}
                 | CompoundStatement {fprintf(rule_fp, "MatchedStatement\n");}
+                | SimpleStatement {fprintf(rule_fp, "MatchedStatement\n"); }
                 | WHILE Expression DO MatchedStatement {fprintf(rule_fp, "MatchedStatement\n");}
                 | FOR ID CE Expression TO Expression DO MatchedStatement {fprintf(rule_fp, "MatchedStatement\n");}
                 ;
 
-OpenStatement: IF Expression THEN StructuredStatement {fprintf(rule_fp, "OpenStatement\n");}
+OpenStatement: IF Expression THEN Statement {fprintf(rule_fp, "OpenStatement\n");}
              | IF Expression THEN MatchedStatement ELSE OpenStatement {fprintf(rule_fp, "OpenStatement\n");}
              | WHILE Expression DO OpenStatement {fprintf(rule_fp, "OpenStatement\n");}
              | FOR ID CE Expression TO Expression DO OpenStatement {fprintf(rule_fp, "OpenStatement\n");}

@@ -20,8 +20,8 @@ end;
 
 function foo2(a : integer; c : string) : y; 
 begin
-{   while a do
-       bar() }
+  while a do
+       bar() 
 end;
 
 function foo3(a, b : integer) : s; forward;
