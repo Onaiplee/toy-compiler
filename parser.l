@@ -54,7 +54,7 @@ while     {return (WHILE);}
 
 
 {WS}      {                    }
-{INT}     {return (INTEGER);}
+{INT}     {yylval.iValue = stoi(yytext); return (INTEGER);}
 {STR}     {return (STRING);}
 {ID}      {yylval.iIndex = lookup(yytext); return (ID);}
 {SYM}     {return *yytext;}

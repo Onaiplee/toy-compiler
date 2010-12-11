@@ -1,6 +1,7 @@
 /* the syntax parser */
 
 %{
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <ctype.h>
@@ -9,16 +10,13 @@
 #define YYDEBUG 1
 #define YYLINENO
 int yylex(void);
-extern FILE *yyin;
-extern FILE *yyout;
-extern struct symbol symtab[NENTRY];
-extern int pointer;
-FILE *rule_fp = NULL;
+
 %}
 
 /* declare tokens */
 
-%token INTEGER STRING
+%token <iValue> INTEGER 
+%token STRING
 %token <iIndex> ID
 %token LT GT NE RG CE
 %token AND begin FORWARD DIV DO ELSE END FOR FUNCTION IF ARRAY MOD
@@ -26,194 +24,277 @@ FILE *rule_fp = NULL;
 
 %union {
     int iIndex;
+    int iValue;
 };
 
 
 %start Program
 %%
 
-Program: PROGRAM ID ';' TypeDefinitions VariableDeclarations
+Program: PROGRAM ID ';' TypeDefinitions VariableDeclarations                                      {};
 
-                 SubprogramDeclarations CompoundStatement '.' {fprintf(rule_fp, "Program\n");};
+                 SubprogramDeclarations CompoundStatement '.'                                     {};
 
 
 TypeDefinitions: 
-               /* empty */
-               | TYPE TypeDefinition ';' TypeDefinition_X {fprintf(rule_fp, "TypeDefinitions\n");};
+               /* empty */                                                                        {}; 
+               | TYPE TypeDefinition ';' TypeDefinition_X                                         {};
                ;
 
 TypeDefinition_X: 
-                /* empty */
-                | TypeDefinition_X TypeDefinition ';' {}
+                /* empty */                                                                       {};
+                | TypeDefinition_X TypeDefinition ';'                                             {};
                 ;
 
 
 VariableDeclarations:
-                    /* empty */
-                    | VAR VariableDeclaration ';' VariableDeclarations_X {fprintf(rule_fp, "VariableDeclarations\n");};
+                    /* empty */                                                                   {};
+                    | VAR VariableDeclaration ';' VariableDeclarations_X                          {};
 
 VariableDeclarations_X:
-                     /* empty */
-                     | VariableDeclarations_X VariableDeclaration ';'  {}
+                     /* empty */                                                                  {};
+                     | VariableDeclarations_X VariableDeclaration ';'                             {};
                      ;
 
 
 SubprogramDeclarations:
-                      /* empty */
-                      | SubprogramDeclarations ProFunDeclarationGroup ';' {fprintf(rule_fp, "SubprogramDeclarations\n");}
+                      /* empty */                                                                 {};
+                      | SubprogramDeclarations ProFunDeclarationGroup ';'                         {};
                       ;
 
 
-ProFunDeclarationGroup: ProcedureDeclaration {}
-                      | FunctionDeclaration {}
+ProFunDeclarationGroup: ProcedureDeclaration                                                      {};
+                      | FunctionDeclaration                                                       {};
                       ;
 
-TypeDefinition: ID '=' Type {fprintf(rule_fp, "TypeDefinition\n");};
+TypeDefinition: ID '=' Type                                                                       {};
 
 
-VariableDeclaration: IdentifierList ':' Type {fprintf(rule_fp, "VariableDeclaration\n");};
+VariableDeclaration: IdentifierList ':' Type                                                      {};
 
-ProcedureDeclaration: PROCEDURE ID '(' FormalParameterList ')' ';' BlockforwardGroup {fprintf(rule_fp, "ProcedureDeclaration\n");};
-FunctionDeclaration: FUNCTION ID '(' FormalParameterList ')' ':' ResultType ';' BlockforwardGroup {fprintf(rule_fp, "FunctionDeclaration\n");};
+ProcedureDeclaration: PROCEDURE ID '(' FormalParameterList ')' ';' BlockforwardGroup              {};
+FunctionDeclaration: FUNCTION ID '(' FormalParameterList ')' ':' ResultType ';' BlockforwardGroup {};
 
-BlockforwardGroup: Block | FORWARD {};
+BlockforwardGroup: Block | FORWARD                                                                {};
 
 
 FormalParameterList:
-                   /* empty */
-                   | FormalParameterList_E {fprintf(rule_fp, "FormalParameterList\n");}
+                   /* empty */                                                                    {};
+                   | FormalParameterList_E                                                        {};
                    ;
 
-FormalParameterList_E: IdentifierList ':' Type IdlistType_X {};
+FormalParameterList_E: IdentifierList ':' Type IdlistType_X                                       {};
 
 IdlistType_X:
-            /* empty */
-            | IdlistType_X ';' IdentifierList ':' Type {}
+            /* empty */                                                                           {};
+            | IdlistType_X ';' IdentifierList ':' Type                                            {};
             ;
 
 
-Block: VariableDeclarations CompoundStatement {fprintf(rule_fp, "Block\n");};
+Block: VariableDeclarations CompoundStatement                                                     {};
 
 
-CompoundStatement: begin StatementSequence END {fprintf(rule_fp, "CompoundStatement\n");};
-StatementSequence: Statement StatementSequence_X {fprintf(rule_fp, "StatementSequence\n");};
+CompoundStatement: begin StatementSequence END                                                    {};
+StatementSequence: Statement StatementSequence_X                                                  {};
+
 StatementSequence_X:
-                   /* empty */
-                   | StatementSequence_X ';' Statement {}
+                   /* empty */                                                                    {};
+                   | StatementSequence_X ';' Statement                                            {};
                    ;
 
 
-Statement: OpenStatement {fprintf(rule_fp, "Statement\n");}
-         | MatchedStatement {fprintf(rule_fp, "Statement\n");}
+Statement: OpenStatement                                                                          {};
+         | MatchedStatement                                                                       {};
          ;
 
 
 
 SimpleStatement:
-               /* empty */
-               | Assignment_Statement {fprintf(rule_fp, "SimpleStatement\n");}
-               | ProcedureStatement {fprintf(rule_fp, "SimpleStatement\n");}
+               /* empty */                                                                        {};
+               | Assignment_Statement                                                             {};
+               | ProcedureStatement                                                               {};
                ;
 
 
-Assignment_Statement: Variable CE Expression {fprintf(rule_fp, "Assignment_Statement\n");};
+Assignment_Statement: Variable CE Expression                                                      {};
 
-ProcedureStatement: ID '(' ActualParameterList ')' {fprintf(rule_fp, "ProcedureStatement\n");};
+ProcedureStatement: ID '(' ActualParameterList ')'                                                {};
 
-/* StructuredStatement: MatchedStatement {fprintf(rule_fp, "StructuredStatement\n");}
-                   | OpenStatement {fprintf(rule_fp, "StructuredStatement\n");}
-                   ; */
 
-MatchedStatement: IF Expression THEN MatchedStatement ELSE MatchedStatement {fprintf(rule_fp, "MatchedStatement\n");}
-                | CompoundStatement {fprintf(rule_fp, "MatchedStatement\n");}
-                | SimpleStatement {fprintf(rule_fp, "MatchedStatement\n"); }
-                | WHILE Expression DO MatchedStatement {fprintf(rule_fp, "MatchedStatement\n");}
-                | FOR ID CE Expression TO Expression DO MatchedStatement {fprintf(rule_fp, "MatchedStatement\n");}
+MatchedStatement: IF Expression THEN MatchedStatement ELSE MatchedStatement                       { $$ = opr(IF, 3, $2, $4, $6); };
+                | CompoundStatement                                                               { $$ = $1; };
+                | SimpleStatement                                                                 { $$ = $1; };
+                | WHILE Expression DO MatchedStatement                                            { $$ = opr(WHILE, 2, $2, $4); };
+                | FOR ID CE Expression TO Expression DO MatchedStatement                          { $$ = opr(FOR, 4, $2, $4, $6, $8); };
                 ;
 
-OpenStatement: IF Expression THEN Statement {fprintf(rule_fp, "OpenStatement\n");}
-             | IF Expression THEN MatchedStatement ELSE OpenStatement {fprintf(rule_fp, "OpenStatement\n");}
-             | WHILE Expression DO OpenStatement {fprintf(rule_fp, "OpenStatement\n");}
-             | FOR ID CE Expression TO Expression DO OpenStatement {fprintf(rule_fp, "OpenStatement\n");}
+OpenStatement: IF Expression THEN Statement                                                       { $$ = opr(IF, 2, $2, $4); };
+             | IF Expression THEN MatchedStatement ELSE OpenStatement                             { $$ = opr(IF, 3, $2, $4, $6); };
+             | WHILE Expression DO OpenStatement                                                  { $$ = opr(WHILE, 2, $2, $4); };
+             | FOR ID CE Expression TO Expression DO OpenStatement                                { $$ = opr(FOR, 4, $2, $4, $6, $8); };
              ;
 
-Type: ID {fprintf(rule_fp, "Type\n");}
-    | ARRAY '[' Constant RG Constant ']' OF Type {fprintf(rule_fp, "Type\n");}
-    | RECORD Field_List END {fprintf(rule_fp, "Type\n");}
+Type: ID                                                                                          { $$ = $1; };
+    | ARRAY '[' Constant RG Constant ']' OF Type                                                  { $$ = opr(ARRAY, 3, $3, $5, $8); };
+    | RECORD Field_List END                                                                       { $$ = $2; };
     ;
 
-ResultType: ID {fprintf(rule_fp, "ResultType\n");};
+ResultType: ID                                                                                    { $$ = $1; };
+
 Field_List:
-    /* empty */
-    | IdentifierList ':' Type IdlistType_X {fprintf(rule_fp, "Field_List\n");}
-    ;
+          /* empty */                                                                             {};
+          | IdentifierList ':' Type IdlistType_X                                                  { $$ = opr();};
+          ;
 
 
-Constant: INTEGER {fprintf(rule_fp, "Constant\n");}
-    | Sign INTEGER {fprintf(rule_fp, "Constant\n");}
-    ;
-Expression: Simple_Expression {fprintf(rule_fp, "Expression\n");}
-    | Simple_Expression Relational_Op Simple_Expression {fprintf(rule_fp, "Expression\n");}
-    ;
+Constant: INTEGER                                                                                 {};
+        | Sign INTEGER                                                                            {};
+        ;
 
-Relational_Op: '<' | LT | '>' | GT | NE | '=' {fprintf(rule_fp, "Relational_Op\n");}
-Simple_Expression: Term AddopTerm_X {fprintf(rule_fp, "Simple_Expression\n");}
-    | Sign Term AddopTerm_X {fprintf(rule_fp, "Simple_Expression\n");}
-    ;
+Expression: Simple_Expression                                                                     { $$ = $1; };
+          | Simple_Expression Relational_Op Simple_Expression                                     { $$ = opr($2, 2, $1, $3); };
+          ;
+
+Relational_Op: '<'                                                                                { $$ = $1; }; 
+             | LT                                                                                 { $$ = $1; }; 
+             | '>'                                                                                { $$ = $1; }; 
+             | GT                                                                                 { $$ = $1; };
+             | NE                                                                                 { $$ = $1; };
+             | '='                                                                                { $$ = $1; };
+             ;
+
+Simple_Expression: Term AddopTerm_X                                                               { $$ = opr( ,2, $1, $2); };
+                 | Sign Term AddopTerm_X                                                          { $$ = opr($2, 2, $1, $3); };
+                 ;
 
 AddopTerm_X:
-           /* empty */
-           | AddopTerm_X AddOp Term {}
+           /* empty */                                                                            {};
+           | AddopTerm_X AddOp Term                                                               { $$ = opr($2, 2, $1, $3); };
            ;
 
-AddOp: '+' | '-' | OR {fprintf(rule_fp, "AddOp\n");};
+AddOp: '+'                                                                                        { $$ = $1; };
+     | '-'                                                                                        { $$ = $1; };
+     | OR                                                                                         { $$ = $1; };
+     ;
 
-Term: Factor MulOpFactor_X {fprintf(rule_fp, "Term\n");};
+Term: Factor MulOpFactor_X                                                                        {};
 
 MulOpFactor_X:
-             /* empty */
-             | MulOpFactor_X MulOp Factor {}
+             /* empty */                                                                          {};
+             | MulOpFactor_X MulOp Factor                                                         { $$ = opr($2, 2, $1, $3); };
              ;
 
-MulOp: '*' | DIV | MOD | AND {fprintf(rule_fp, "MulOp\n");};
-Factor:
-        INTEGER {fprintf(rule_fp, "Factor\n");}
-      | STRING {fprintf(rule_fp, "Factor\n");}
-      | Variable {fprintf(rule_fp, "Factor\n");}
-      | Function_Reference {fprintf(rule_fp, "Factor\n");}
-      | NOT Factor {fprintf(rule_fp, "Factor\n");}
-      | '(' Expression ')' {fprintf(rule_fp, "Factor\n");}
+MulOp: '*'                                                                                        { $$ = $1; }; 
+     | DIV                                                                                        { $$ = $1; }; 
+     | MOD                                                                                        { $$ = $1; };
+     | AND                                                                                        { $$ = $1; };
+     ;
+
+Factor: INTEGER                                                                                   {};
+      | STRING                                                                                    {};
+      | Variable                                                                                  {};
+      | Function_Reference                                                                        {};
+      | NOT Factor                                                                                {};
+      | '(' Expression ')'                                                                        { $$ = $2; };
       ;
 
-Function_Reference: ID '(' ActualParameterList ')' {fprintf(rule_fp, "Function_Reference\n");};
-Variable: ID ComponentSelection {fprintf(rule_fp, "Variable\n");};
+Function_Reference: ID '(' ActualParameterList ')'                                                {};
+
+Variable: ID ComponentSelection                                                                   {};
+
 ComponentSelection:
-                  /* empty */
-                  | '.' ID ComponentSelection {fprintf(rule_fp, "ComponentSelection\n");}
-                  | '[' Expression ']' ComponentSelection {fprintf(rule_fp, "ComponentSelection\n");}
+                  /* empty */                                                                     {};
+                  | '.' ID ComponentSelection                                                     {};
+                  | '[' Expression ']' ComponentSelection                                         {};
                   ;
 
 ActualParameterList:
-                   /* empty */
-                   | Expression Expression_X {fprintf(rule_fp, "ActualParameterList\n");}
+                   /* empty */                                                                    {};
+                   | Expression Expression_X                                                      {};
                    ;
 Expression_X:
-            /* empty */
-            | Expression_X ',' Expression  {}
+            /* empty */                                                                           {};
+            | Expression_X ',' Expression                                                         {};
             ;
 
-IdentifierList: ID Id_X {fprintf(rule_fp, "IdentifierList\n");};
+IdentifierList: ID Id_X                                                                           {};
+
 Id_X:
-    /* empty */
-    | Id_X ',' ID {}
+    /* empty */                                                                                   {};
+    | Id_X ',' ID                                                                                 {};
     ;
 
-Sign: 
-      '+' {fprintf(rule_fp, "Sign\n");}
-    | '-' {fprintf(rule_fp, "Sign\n");}
+Sign: '+'                                                                                         {};
+    | '-'                                                                                         {};
     ;
 
 %%
+
+#define SIZEOF_NODETYPE ((char *) &p->con - (char *)p)
+
+nodeType *con(int value)
+{
+  nodeType *p;
+  size_t nodeSize;
+
+  nodeSize = SIZEOF_NODETYPE + sizeof(conNodeType);
+  if ((p = malloc(nodeSize)) == NULL)
+    yyerror("out of memory");
+  
+  p->type = typeCon;
+  p->con.value = value;
+
+  return p;
+}
+
+nodeType *id(int i)
+{
+  nodeType *p;
+  size_t nodeSize;
+
+  nodeSize = SIZEOF_NODETYPE + sizeof(idNodeType);
+  if ((p = malloc(nodeSize) == NULL)
+    yyerror("out of memory");
+
+  p->type = typeId;
+  p->id.i = i;
+
+  return p;
+}
+
+nodeType *opr(int oper, int nops, ...)
+{
+  va_list ap;
+  nodeType *p;
+  size_t nodeSize;
+  int i;
+
+  nodeSize = SIZEOF_NODETYPE + sizeof(oprNodeType) + (nops - 1) * sizeof(nodeType*);
+  if ((p = malloc(nodeSize) == NULL)
+    yyerror("out of memory");
+
+  p->type = typeOpr;
+  p->opr.oper = oper;
+  p->opr.nops = nops;
+  va_start(ap, nops);
+  for (i = 0; i < nops; i++)
+    p->opr.op[i] = va_arg(ap, nodeType*);
+  va_end(ap);
+  return p;
+}
+
+void freeNode(nodeType *p)
+{
+  int i;
+
+  if (!p) return;
+  if (p->type == tpyeOpr) {
+    for (i = 0; i < p->opr.nops; i++)
+      freeNode(p->opr.op[i]);
+  }
+  free (p);
+}
+
 
 main(int argc, char **argv)
 {
