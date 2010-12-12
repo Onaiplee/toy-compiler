@@ -6,7 +6,14 @@ struct symbol {
   int scope;
 };
 
-typedef enum { typeCon, typeId, typeOpr } nodeEnum;
+typedef enum { typeCon, typeId, typeOpr, typeConstruct } nodeEnum;
+typedef enum { Program, TypeDefinitions, TypeDefinition_X, VariableDeclarations,
+               VariableDeclarations_X, TypeDefinition, VariableDeclaration, 
+               ProcedureDeclaration, FunctionDeclaration, 
+
+
+
+} constructEnum;
 
 typedef struct {
   int value;
@@ -22,12 +29,19 @@ typedef struct {
   struct nodeTypeTag *op[1]
 } oprNodeType;
 
+typedef struct {
+  constructEnum type;
+  int nops;
+  struct nodeTypeTag *node[1]
+} interNodeType;
+
 typedef struct nodeTypeTag {
   nodeEnum type;
   union {
     conNodeType con;
     idNodeType id;
     oprNodeType opr;
+    interNodeType node;
   };
 } nodeType;
 

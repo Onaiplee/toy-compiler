@@ -37,33 +37,33 @@ int yylex(void);
 
 Program: PROGRAM ID ';' TypeDefinitions VariableDeclarations                                      
 
-                 SubprogramDeclarations CompoundStatement '.'                                     { $$ = opr(ProgramNode, 5, id($2), $4, $5, $6, $7); };
+                 SubprogramDeclarations CompoundStatement '.'                                     { $$ = newnode(Program, 5, id($2), $4, $5, $6, $7); };
 
 
 TypeDefinitions: 
                /* empty */                                                                        
-               | TYPE TypeDefinition ';' TypeDefinition_X                                         { $$ = opr(TypeDefinitionsNode, 2, $2, $4); };
+               | TYPE TypeDefinition ';' TypeDefinition_X                                         { $$ = newnode(TypeDefinitions, 2, $2, $4); };
                ;
 
 TypeDefinition_X: 
                 /* empty */                                                                       
-                | TypeDefinition_X TypeDefinition ';'                                             { $$ = opr(TypeDefinition_XNode, 2, $1, $2); };
+                | TypeDefinition_X TypeDefinition ';'                                             { $$ = newnode(TypeDefinition_X, 2, $1, $2); };
                 ;
 
 
 VariableDeclarations:
                     /* empty */                                                                   
-                    | VAR VariableDeclaration ';' VariableDeclarations_X                          { $$ = opr(VariableDeclarationsNode, 2, $2, $4); };
+                    | VAR VariableDeclaration ';' VariableDeclarations_X                          { $$ = newnode(VariableDeclarations, 2, $2, $4); };
 
 VariableDeclarations_X:
                      /* empty */                                                                  
-                     | VariableDeclarations_X VariableDeclaration ';'                             { $$ = opr(VariableDeclarations_XNode, 2, $1, $2); };
+                     | VariableDeclarations_X VariableDeclaration ';'                             { $$ = newnode(VariableDeclarations_X, 2, $1, $2); };
                      ;
 
 
 SubprogramDeclarations:
                       /* empty */                                                                 
-                      | SubprogramDeclarations ProFunDeclarationGroup ';'                         { $$ = opr(SubprogramDeclarationsNode, 2, $1, $2); };
+                      | SubprogramDeclarations ProFunDeclarationGroup ';'                         { $$ = newnode(SubprogramDeclarations, 2, $1, $2); };
                       ;
 
 
@@ -71,13 +71,13 @@ ProFunDeclarationGroup: ProcedureDeclaration                                    
                       | FunctionDeclaration                                                       { $$ = $1; };
                       ;
 
-TypeDefinition: ID '=' Type                                                                       { $$ = opr(TypeDefinition, 2, id($1), $3); };
+TypeDefinition: ID '=' Type                                                                       { $$ = newnode(TypeDefinition, 2, id($1), $3); };
 
 
-VariableDeclaration: IdentifierList ':' Type                                                      { $$ = opr(VariableDeclaration, 2, $1, $3); };
+VariableDeclaration: IdentifierList ':' Type                                                      { $$ = newnode(VariableDeclaration, 2, $1, $3); };
 
-ProcedureDeclaration: PROCEDURE ID '(' FormalParameterList ')' ';' BlockforwardGroup              { $$ = opr(ProcedureDeclaration, 3, id($2), $4, $7); };
-FunctionDeclaration: FUNCTION ID '(' FormalParameterList ')' ':' ResultType ';' BlockforwardGroup { $$ = opr(FunctionDeclaration, 4, id($2), $4, $7, $9); };
+ProcedureDeclaration: PROCEDURE ID '(' FormalParameterList ')' ';' BlockforwardGroup              { $$ = newnode(ProcedureDeclaration, 3, id($2), $4, $7); };
+FunctionDeclaration: FUNCTION ID '(' FormalParameterList ')' ':' ResultType ';' BlockforwardGroup { $$ = newnode(FunctionDeclaration, 4, id($2), $4, $7, $9); };
 
 BlockforwardGroup: Block                                                                          { $$ = $1; }
                  | FORWARD
@@ -289,6 +289,27 @@ nodeType *opr(int oper, int nops, ...)
   return p;
 }
 
+nodeType *newnode(nodeEnum nodetype, int nops, ...)
+{
+  va_list ap;
+  nodeType *p;
+  size_t nodeSize;
+  int i;
+  
+  nodeSize = SIZEOF_NODETYPE + sizeof(interNodeType) + (nops - 1) * sizeof(nodeType *);
+  if ((p = malloc(nodeSize) == NULL)
+    yyerror("out of memory");
+
+  p->type = typeConstruct;
+  p->node.type = nodetype;
+  p->node.nops = nops;
+  va_start(ap, nops);
+  for (i = 0; i < nops; i++)
+    p->node.op[i] = va_arg(ap, nodeType*);
+  va_end(ap);
+  return p;
+}
+  
 void freeNode(nodeType *p)
 {
   int i;
