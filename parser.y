@@ -25,7 +25,11 @@ int yylex(void);
 %union {
     int iIndex;
     int iValue;
+    nodeType *nPtr;
 };
+
+%type <nPtr> TypeDefinitions VariableDeclarations SubprogramDeclarations CompoundStatement TypeDefinition TypeDefinition_X TypeDefinition
+%type <nPtr> VariableDeclarations_X ProFunDeclarationGroup
 
 
 %start Program
@@ -37,86 +41,88 @@ Program: PROGRAM ID ';' TypeDefinitions VariableDeclarations
 
 
 TypeDefinitions: 
-               /* empty */                                                                        {}; 
-               | TYPE TypeDefinition ';' TypeDefinition_X                                         { $$ = opr();};
+               /* empty */                                                                        
+               | TYPE TypeDefinition ';' TypeDefinition_X                                         { $$ = opr(TypeDefinitionsNode, 2, $2, $4); };
                ;
 
 TypeDefinition_X: 
-                /* empty */                                                                       {};
-                | TypeDefinition_X TypeDefinition ';'                                             {};
+                /* empty */                                                                       
+                | TypeDefinition_X TypeDefinition ';'                                             { $$ = opr(TypeDefinition_XNode, 2, $1, $2); };
                 ;
 
 
 VariableDeclarations:
-                    /* empty */                                                                   {};
-                    | VAR VariableDeclaration ';' VariableDeclarations_X                          {};
+                    /* empty */                                                                   
+                    | VAR VariableDeclaration ';' VariableDeclarations_X                          { $$ = opr(VariableDeclarationsNode, 2, $2, $4); };
 
 VariableDeclarations_X:
-                     /* empty */                                                                  {};
-                     | VariableDeclarations_X VariableDeclaration ';'                             {};
+                     /* empty */                                                                  
+                     | VariableDeclarations_X VariableDeclaration ';'                             { $$ = opr(VariableDeclarations_XNode, 2, $1, $2); };
                      ;
 
 
 SubprogramDeclarations:
-                      /* empty */                                                                 {};
-                      | SubprogramDeclarations ProFunDeclarationGroup ';'                         {};
+                      /* empty */                                                                 
+                      | SubprogramDeclarations ProFunDeclarationGroup ';'                         { $$ = opr(SubprogramDeclarationsNode, 2, $1, $2); };
                       ;
 
 
-ProFunDeclarationGroup: ProcedureDeclaration                                                      {};
-                      | FunctionDeclaration                                                       {};
+ProFunDeclarationGroup: ProcedureDeclaration                                                      { $$ = $1; };
+                      | FunctionDeclaration                                                       { $$ = $1; };
                       ;
 
-TypeDefinition: ID '=' Type                                                                       {};
+TypeDefinition: ID '=' Type                                                                       { $$ = opr(TypeDefinition, 2, id($1), $3); };
 
 
-VariableDeclaration: IdentifierList ':' Type                                                      {};
+VariableDeclaration: IdentifierList ':' Type                                                      { $$ = opr(VariableDeclaration, 2, $1, $3); };
 
-ProcedureDeclaration: PROCEDURE ID '(' FormalParameterList ')' ';' BlockforwardGroup              {};
-FunctionDeclaration: FUNCTION ID '(' FormalParameterList ')' ':' ResultType ';' BlockforwardGroup {};
+ProcedureDeclaration: PROCEDURE ID '(' FormalParameterList ')' ';' BlockforwardGroup              { $$ = opr(ProcedureDeclaration, 3, id($2), $4, $7); };
+FunctionDeclaration: FUNCTION ID '(' FormalParameterList ')' ':' ResultType ';' BlockforwardGroup { $$ = opr(FunctionDeclaration, 4, id($2), $4, $7, $9); };
 
-BlockforwardGroup: Block | FORWARD                                                                {};
+BlockforwardGroup: Block                                                                          { $$ = $1; }
+                 | FORWARD
+                 ;
 
 
 FormalParameterList:
-                   /* empty */                                                                    {};
-                   | FormalParameterList_E                                                        {};
+                   /* empty */                                                                    
+                   | FormalParameterList_E                                                        { $$ = $1; };
                    ;
 
-FormalParameterList_E: IdentifierList ':' Type IdlistType_X                                       {};
+FormalParameterList_E: IdentifierList ':' Type IdlistType_X                                       { $$ = opr(FormalParameterList_E, 3, $1, $3, $4); };
 
 IdlistType_X:
-            /* empty */                                                                           {};
-            | IdlistType_X ';' IdentifierList ':' Type                                            {};
+            /* empty */                                                                           
+            | IdlistType_X ';' IdentifierList ':' Type                                            { $$ = opr(IdlistType_X, 3, $1, $3, $5); };
             ;
 
 
-Block: VariableDeclarations CompoundStatement                                                     {};
+Block: VariableDeclarations CompoundStatement                                                     { $$ = opr(Block, 2, $1, $2); };
 
 
-CompoundStatement: begin StatementSequence END                                                    {};
-StatementSequence: Statement StatementSequence_X                                                  {};
+CompoundStatement: begin StatementSequence END                                                    { $$ = $2; };
+StatementSequence: Statement StatementSequence_X                                                  { $$ = opr(StatementSequence, 2, $1, $2); };
 
 StatementSequence_X:
-                   /* empty */                                                                    {};
-                   | StatementSequence_X ';' Statement                                            {};
+                   /* empty */                                                                    
+                   | StatementSequence_X ';' Statement                                            { $$ = opr(StatementSequence_X, 2, $1, $3); };
                    ;
 
 
-Statement: OpenStatement                                                                          {};
-         | MatchedStatement                                                                       {};
+Statement: OpenStatement                                                                          { $$ = $1; };
+         | MatchedStatement                                                                       { $$ = $1; };
          ;
 
 
 
 SimpleStatement:
-               /* empty */                                                                        {};
-               | Assignment_Statement                                                             {};
-               | ProcedureStatement                                                               {};
+               /* empty */                                                                        
+               | Assignment_Statement                                                             { $$ = $1; };
+               | ProcedureStatement                                                               { $$ = $1; };
                ;
 
 
-Assignment_Statement: Variable CE Expression                                                      {};
+Assignment_Statement: Variable CE Expression                                                      { $$ = opr(CE, 2, $1, $3); };
 
 ProcedureStatement: ID '(' ActualParameterList ')'                                                { $$ = opr(ProceedureStatementNode, 2, id($1), $3); };
 
@@ -134,7 +140,7 @@ OpenStatement: IF Expression THEN Statement                                     
              | FOR ID CE Expression TO Expression DO OpenStatement                                { $$ = opr(FOR, 4, $2, $4, $6, $8); };
              ;
 
-Type: ID                                                                                          { $$ = $1; };
+Type: ID                                                                                          { $$ = id($1); };
     | ARRAY '[' Constant RG Constant ']' OF Type                                                  { $$ = opr(ARRAY, 3, $3, $5, $8); };
     | RECORD Field_List END                                                                       { $$ = $2; };
     ;
@@ -142,13 +148,13 @@ Type: ID                                                                        
 ResultType: ID                                                                                    { $$ = $1; };
 
 Field_List:
-          /* empty */                                                                             {};
-          | IdentifierList ':' Type IdlistType_X                                                  { $$ = opr();};
+          /* empty */                                                                             
+          | IdentifierList ':' Type IdlistType_X                                                  { $$ = opr(Field_List, 3, $1, $3, $4); };
           ;
 
 
-Constant: INTEGER                                                                                 {};
-        | Sign INTEGER                                                                            {};
+Constant: INTEGER                                                                                 { $$ = con($1); };
+        | Sign INTEGER                                                                            { $$ = opr(Constant, 2, $1, $2); };
         ;
 
 Expression: Simple_Expression                                                                     { $$ = $1; };
@@ -163,12 +169,12 @@ Relational_Op: '<'                                                              
              | '='                                                                                { $$ = $1; };
              ;
 
-Simple_Expression: Term AddopTerm_X                                                               { $$ = opr( ,2, $1, $2); };
-                 | Sign Term AddopTerm_X                                                          { $$ = opr($2, 2, $1, $3); };
+Simple_Expression: Term AddopTerm_X                                                               { $$ = opr(Simple_Expression ,2, $1, $2); };
+                 | Sign Term AddopTerm_X                                                          { $$ = opr(Simple_Expression, 3, $1, $2, $3); };
                  ;
 
 AddopTerm_X:
-           /* empty */                                                                            {};
+           /* empty */                                                                            
            | AddopTerm_X AddOp Term                                                               { $$ = opr($2, 2, $1, $3); };
            ;
 
@@ -177,10 +183,10 @@ AddOp: '+'                                                                      
      | OR                                                                                         { $$ = $1; };
      ;
 
-Term: Factor MulOpFactor_X                                                                        {};
+Term: Factor MulOpFactor_X                                                                        { $$ = opr(Term, $1, $2); };
 
 MulOpFactor_X:
-             /* empty */                                                                          {};
+             /* empty */                                                                          
              | MulOpFactor_X MulOp Factor                                                         { $$ = opr($2, 2, $1, $3); };
              ;
 
@@ -190,42 +196,42 @@ MulOp: '*'                                                                      
      | AND                                                                                        { $$ = $1; };
      ;
 
-Factor: INTEGER                                                                                   {};
-      | STRING                                                                                    {};
-      | Variable                                                                                  {};
-      | Function_Reference                                                                        {};
-      | NOT Factor                                                                                {};
+Factor: INTEGER                                                                                   { $$ = id($1); };
+      | STRING                                                                                    { $$ = $1; };
+      | Variable                                                                                  { $$ = $1; };
+      | Function_Reference                                                                        { $$ = $1; };
+      | NOT Factor                                                                                { $$ = opr(NOT, 1, $2); };
       | '(' Expression ')'                                                                        { $$ = $2; };
       ;
 
-Function_Reference: ID '(' ActualParameterList ')'                                                {};
+Function_Reference: ID '(' ActualParameterList ')'                                                { $$ = opr(Function_Reference, 2, id($1), $3); };
 
-Variable: ID ComponentSelection                                                                   {};
+Variable: ID ComponentSelection                                                                   { $$ = opr(Variable, 2, id($1), $2); };
 
 ComponentSelection:
-                  /* empty */                                                                     {};
-                  | '.' ID ComponentSelection                                                     {};
-                  | '[' Expression ']' ComponentSelection                                         {};
+                  /* empty */                                                                     
+                  | '.' ID ComponentSelection                                                     { $$ = opr(ComponentSelection, 2, $2, $3); };
+                  | '[' Expression ']' ComponentSelection                                         { $$ = opr(ComponentSelection, 2, $2, $4); };
                   ;
 
 ActualParameterList:
-                   /* empty */                                                                    {};
-                   | Expression Expression_X                                                      {};
+                   /* empty */                                                                    
+                   | Expression Expression_X                                                      { $$ = opr(ActualParameterList, 2, $1, $3); };
                    ;
 Expression_X:
-            /* empty */                                                                           {};
-            | Expression_X ',' Expression                                                         {};
+            /* empty */                                                                           
+            | Expression_X ',' Expression                                                         { $$ = opr(Expression_X, 2, $1, $3); };
             ;
 
-IdentifierList: ID Id_X                                                                           {};
+IdentifierList: ID Id_X                                                                           { $$ = opr(IdentifierList, 2, id($1), $2); };
 
 Id_X:
-    /* empty */                                                                                   {};
-    | Id_X ',' ID                                                                                 {};
+    /* empty */                                                                                   
+    | Id_X ',' ID                                                                                 { $$ = opr(Id_X, 2, $1, id($3)); };
     ;
 
-Sign: '+'                                                                                         {};
-    | '-'                                                                                         {};
+Sign: '+'                                                                                         { $$ = $1; };
+    | '-'                                                                                         { $$ = $1; };
     ;
 
 %%
