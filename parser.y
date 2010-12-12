@@ -31,14 +31,14 @@ int yylex(void);
 %start Program
 %%
 
-Program: PROGRAM ID ';' TypeDefinitions VariableDeclarations                                      {};
+Program: PROGRAM ID ';' TypeDefinitions VariableDeclarations                                      
 
-                 SubprogramDeclarations CompoundStatement '.'                                     {};
+                 SubprogramDeclarations CompoundStatement '.'                                     { $$ = opr(ProgramNode, 5, id($2), $4, $5, $6, $7); };
 
 
 TypeDefinitions: 
                /* empty */                                                                        {}; 
-               | TYPE TypeDefinition ';' TypeDefinition_X                                         {};
+               | TYPE TypeDefinition ';' TypeDefinition_X                                         { $$ = opr();};
                ;
 
 TypeDefinition_X: 
@@ -118,7 +118,7 @@ SimpleStatement:
 
 Assignment_Statement: Variable CE Expression                                                      {};
 
-ProcedureStatement: ID '(' ActualParameterList ')'                                                {};
+ProcedureStatement: ID '(' ActualParameterList ')'                                                { $$ = opr(ProceedureStatementNode, 2, id($1), $3); };
 
 
 MatchedStatement: IF Expression THEN MatchedStatement ELSE MatchedStatement                       { $$ = opr(IF, 3, $2, $4, $6); };
