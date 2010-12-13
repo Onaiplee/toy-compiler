@@ -102,7 +102,7 @@ ProcedureDeclaration: PROCEDURE ID '(' FormalParameterList ')' ';' BlockforwardG
 FunctionDeclaration: FUNCTION ID '(' FormalParameterList ')' ':' ResultType ';' BlockforwardGroup { $$ = newnode(FunctionDeclaration, 4, id($2), $4, $7, $9); };
 
 BlockforwardGroup: Block                                                                          { $$ = newnode(BlockforwardGroup, 1, $1); };
-                 | FORWARD                                                                        
+                 | FORWARD                                                                        {};
                  ;
 
 
