@@ -5,31 +5,53 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <string.h>
 #include "parser.tab.h"
 #include "parser.h"
 #define YYDEBUG 1
 #define YYLINENO
+
+nodeType *opr(int oper, int nops, ...);
+nodeType *id(int i);
+nodeType *con(int value);
+nodeType *newnode(constructEnum nodetype, int nops, ...);
+void freeNode(nodeType *p);
+int ex(nodeType *p);
 int yylex(void);
 
 %}
 
-/* declare tokens */
+
+
+%union {
+    int iValue;
+    int iIndex;
+    struct nodeTypeTag * nPtr;
+};
 
 %token <iValue> INTEGER 
-%token STRING
+/* %token <sTring> STRING */
 %token <iIndex> ID
+%token STRING
 %token LT GT NE RG CE
 %token AND begin FORWARD DIV DO ELSE END FOR FUNCTION IF ARRAY MOD
 %token PROCEDURE OR OF NOT PROGRAM RECORD THEN TO TYPE VAR WHILE
+%token MINUS
 
-%union {
-    int iIndex;
-    int iValue;
-    nodeType *nPtr;
-};
+%type <nPtr> Program TypeDefinitions TypeDefinition_X VariableDeclarations
+             VariableDeclarations_X SubprogramDeclarations TypeDefinition VariableDeclaration 
+             ProcedureDeclaration FunctionDeclaration FormalParameterList
+             IdlistType_X Block CompoundStatement StatementSequence 
+             StatementSequence_X Statement SimpleStatement Assignment_Statement
+             MatchedStatement Type Field_List Constant 
+             Expression Simple_Expression Term Factor 
+             Variable ComponentSelection ActualParameterList Expression_X 
+             IdentifierList Id_X
+             ProcedureStatement ProFunDeclarationGroup
+             BlockforwardGroup 
+             OpenStatement ResultType 
+             AddopTerm_X MulOpFactor_X Function_Reference 
 
-%type <nPtr> TypeDefinitions VariableDeclarations SubprogramDeclarations CompoundStatement TypeDefinition TypeDefinition_X TypeDefinition
-%type <nPtr> VariableDeclarations_X ProFunDeclarationGroup
 
 
 %start Program
@@ -67,8 +89,8 @@ SubprogramDeclarations:
                       ;
 
 
-ProFunDeclarationGroup: ProcedureDeclaration                                                      { $$ = $1; };
-                      | FunctionDeclaration                                                       { $$ = $1; };
+ProFunDeclarationGroup: ProcedureDeclaration                                                      { $$ = newnode(ProFunDeclarationGroup, 1, $1); };
+                      | FunctionDeclaration                                                       { $$ = newnode(ProFunDeclarationGroup, 1, $1); };
                       ;
 
 TypeDefinition: ID '=' Type                                                                       { $$ = newnode(TypeDefinition, 2, id($1), $3); };
@@ -79,160 +101,170 @@ VariableDeclaration: IdentifierList ':' Type                                    
 ProcedureDeclaration: PROCEDURE ID '(' FormalParameterList ')' ';' BlockforwardGroup              { $$ = newnode(ProcedureDeclaration, 3, id($2), $4, $7); };
 FunctionDeclaration: FUNCTION ID '(' FormalParameterList ')' ':' ResultType ';' BlockforwardGroup { $$ = newnode(FunctionDeclaration, 4, id($2), $4, $7, $9); };
 
-BlockforwardGroup: Block                                                                          { $$ = $1; }
-                 | FORWARD
+BlockforwardGroup: Block                                                                          { $$ = newnode(BlockforwardGroup, 1, $1); };
+                 | FORWARD                                                                        
                  ;
 
 
 FormalParameterList:
                    /* empty */                                                                    
-                   | FormalParameterList_E                                                        { $$ = $1; };
+                   | IdentifierList ':' Type IdlistType_X                                         { $$ = newnode(FormalParameterList, 3, $1, $3, $4); };
                    ;
-
-FormalParameterList_E: IdentifierList ':' Type IdlistType_X                                       { $$ = opr(FormalParameterList_E, 3, $1, $3, $4); };
 
 IdlistType_X:
             /* empty */                                                                           
-            | IdlistType_X ';' IdentifierList ':' Type                                            { $$ = opr(IdlistType_X, 3, $1, $3, $5); };
+            | IdlistType_X ';' IdentifierList ':' Type                                            { $$ = newnode(IdlistType_X, 3, $1, $3, $5); };
             ;
 
 
-Block: VariableDeclarations CompoundStatement                                                     { $$ = opr(Block, 2, $1, $2); };
+Block: VariableDeclarations CompoundStatement                                                     { $$ = newnode(Block, 2, $1, $2); };
 
 
-CompoundStatement: begin StatementSequence END                                                    { $$ = $2; };
-StatementSequence: Statement StatementSequence_X                                                  { $$ = opr(StatementSequence, 2, $1, $2); };
+CompoundStatement: begin StatementSequence END                                                    { $$ = newnode(CompoundStatement, 1, $2); };
+StatementSequence: Statement StatementSequence_X                                                  { $$ = newnode(StatementSequence, 2, $1, $2); };
 
 StatementSequence_X:
                    /* empty */                                                                    
-                   | StatementSequence_X ';' Statement                                            { $$ = opr(StatementSequence_X, 2, $1, $3); };
+                   | StatementSequence_X ';' Statement                                            { $$ = newnode(StatementSequence_X, 2, $1, $3); };
                    ;
 
 
-Statement: OpenStatement                                                                          { $$ = $1; };
-         | MatchedStatement                                                                       { $$ = $1; };
+Statement: OpenStatement                                                                          { $$ = newnode(Statement, 1, $1); };
+         | MatchedStatement                                                                       { $$ = newnode(Statement, 1, $1); };
          ;
 
 
 
 SimpleStatement:
                /* empty */                                                                        
-               | Assignment_Statement                                                             { $$ = $1; };
-               | ProcedureStatement                                                               { $$ = $1; };
+               | Assignment_Statement                                                             { $$ = newnode(SimpleStatement, 1, $1); };
+               | ProcedureStatement                                                               { $$ = newnode(SimpleStatement, 1, $1); };
                ;
 
 
-Assignment_Statement: Variable CE Expression                                                      { $$ = opr(CE, 2, $1, $3); };
+Assignment_Statement: Variable CE Expression                                                      { $$ = newnode(Assignment_Statement, 2, $1, $3); };
 
-ProcedureStatement: ID '(' ActualParameterList ')'                                                { $$ = opr(ProceedureStatementNode, 2, id($1), $3); };
+ProcedureStatement: ID '(' ActualParameterList ')'                                                { $$ = newnode(ProceedureStatement, 2, id($1), $3); };
 
 
 MatchedStatement: IF Expression THEN MatchedStatement ELSE MatchedStatement                       { $$ = opr(IF, 3, $2, $4, $6); };
-                | CompoundStatement                                                               { $$ = $1; };
-                | SimpleStatement                                                                 { $$ = $1; };
+                | CompoundStatement                                                               { $$ = newnode(MatchedStatement, 1, $1); };
+                | SimpleStatement                                                                 { $$ = newnode(MatchedStatement, 1, $1); };
                 | WHILE Expression DO MatchedStatement                                            { $$ = opr(WHILE, 2, $2, $4); };
-                | FOR ID CE Expression TO Expression DO MatchedStatement                          { $$ = opr(FOR, 4, $2, $4, $6, $8); };
+                | FOR ID CE Expression TO Expression DO MatchedStatement                          { $$ = opr(FOR, 4, id($2), $4, $6, $8); };
                 ;
 
 OpenStatement: IF Expression THEN Statement                                                       { $$ = opr(IF, 2, $2, $4); };
              | IF Expression THEN MatchedStatement ELSE OpenStatement                             { $$ = opr(IF, 3, $2, $4, $6); };
              | WHILE Expression DO OpenStatement                                                  { $$ = opr(WHILE, 2, $2, $4); };
-             | FOR ID CE Expression TO Expression DO OpenStatement                                { $$ = opr(FOR, 4, $2, $4, $6, $8); };
+             | FOR ID CE Expression TO Expression DO OpenStatement                                { $$ = opr(FOR, 4, id($2), $4, $6, $8); };
              ;
 
 Type: ID                                                                                          { $$ = id($1); };
     | ARRAY '[' Constant RG Constant ']' OF Type                                                  { $$ = opr(ARRAY, 3, $3, $5, $8); };
-    | RECORD Field_List END                                                                       { $$ = $2; };
+    | RECORD Field_List END                                                                       { $$ = newnode(Type, 1, $2); };
     ;
 
-ResultType: ID                                                                                    { $$ = $1; };
+ResultType: ID                                                                                    { $$ = id($1); };
 
 Field_List:
           /* empty */                                                                             
-          | IdentifierList ':' Type IdlistType_X                                                  { $$ = opr(Field_List, 3, $1, $3, $4); };
+          | IdentifierList ':' Type IdlistType_X                                                  { $$ = newnode(Field_List, 3, $1, $3, $4); };
           ;
 
 
 Constant: INTEGER                                                                                 { $$ = con($1); };
-        | Sign INTEGER                                                                            { $$ = opr(Constant, 2, $1, $2); };
+        | '+' INTEGER                                                                             { $$ = con($2); };
+        | '-' INTEGER                                                                             { $$ = opr(MINUS, 1, con($2)); };
         ;
 
-Expression: Simple_Expression                                                                     { $$ = $1; };
-          | Simple_Expression Relational_Op Simple_Expression                                     { $$ = opr($2, 2, $1, $3); };
+Expression: Simple_Expression                                                                     { $$ = newnode(Expression, 1, $1); };
+          | Simple_Expression '<' Simple_Expression                                               { $$ = opr('<', 2, $1, $3); };
+          | Simple_Expression LT Simple_Expression                                                { $$ = opr(LT , 2, $1, $3); };
+          | Simple_Expression '>' Simple_Expression                                               { $$ = opr('>', 2, $1, $3); };
+          | Simple_Expression GT Simple_Expression                                                { $$ = opr(GT , 2, $1, $3); };
+          | Simple_Expression NE Simple_Expression                                                { $$ = opr(NE , 2, $1, $3); };
+          | Simple_Expression '=' Simple_Expression                                               { $$ = opr('=', 2, $1, $3); };
           ;
 
-Relational_Op: '<'                                                                                { $$ = $1; }; 
+/*Relational_Op: '<'                                                                                { $$ = $1; }; 
              | LT                                                                                 { $$ = $1; }; 
              | '>'                                                                                { $$ = $1; }; 
              | GT                                                                                 { $$ = $1; };
              | NE                                                                                 { $$ = $1; };
              | '='                                                                                { $$ = $1; };
-             ;
+             ; */
 
-Simple_Expression: Term AddopTerm_X                                                               { $$ = opr(Simple_Expression ,2, $1, $2); };
-                 | Sign Term AddopTerm_X                                                          { $$ = opr(Simple_Expression, 3, $1, $2, $3); };
+Simple_Expression: Term AddopTerm_X                                                               { $$ = newnode(Simple_Expression ,2, $1, $2); };
+                 | '+' Term AddopTerm_X                                                           { $$ = newnode(Simple_Expression, 2, $2, $3); };
+                 | '-' Term AddopTerm_X                                                           { $$ = opr(MINUS, 2, $2, $3); };
                  ;
 
 AddopTerm_X:
            /* empty */                                                                            
-           | AddopTerm_X AddOp Term                                                               { $$ = opr($2, 2, $1, $3); };
+           | AddopTerm_X '+' Term                                                               { $$ = opr('+', 2, $1, $3); };
+           | AddopTerm_X '-' Term                                                               { $$ = opr('-', 2, $1, $3); };
+           | AddopTerm_X OR Term                                                                { $$ = opr(OR , 2, $1, $3); };
            ;
 
-AddOp: '+'                                                                                        { $$ = $1; };
+/* AddOp: '+'                                                                                        { $$ = $1; };
      | '-'                                                                                        { $$ = $1; };
      | OR                                                                                         { $$ = $1; };
-     ;
+     ; */
 
-Term: Factor MulOpFactor_X                                                                        { $$ = opr(Term, $1, $2); };
+Term: Factor MulOpFactor_X                                                                        { $$ = newnode(Term, 2, $1, $2); };
 
 MulOpFactor_X:
              /* empty */                                                                          
-             | MulOpFactor_X MulOp Factor                                                         { $$ = opr($2, 2, $1, $3); };
+             | MulOpFactor_X '*' Factor                                                         { $$ = opr('*', 2, $1, $3); };
+             | MulOpFactor_X DIV Factor                                                         { $$ = opr(DIV, 2, $1, $3); };
+             | MulOpFactor_X MOD Factor                                                         { $$ = opr(MOD, 2, $1, $3); };
+             | MulOpFactor_X AND Factor                                                         { $$ = opr(AND, 2, $1, $3); };
              ;
 
-MulOp: '*'                                                                                        { $$ = $1; }; 
+/* MulOp: '*'                                                                                        { $$ = $1; }; 
      | DIV                                                                                        { $$ = $1; }; 
      | MOD                                                                                        { $$ = $1; };
      | AND                                                                                        { $$ = $1; };
-     ;
+     ; */
 
-Factor: INTEGER                                                                                   { $$ = id($1); };
-      | STRING                                                                                    { $$ = $1; };
-      | Variable                                                                                  { $$ = $1; };
-      | Function_Reference                                                                        { $$ = $1; };
+Factor: INTEGER                                                                                   { $$ = con($1); };
+      | STRING                                                                                    {};
+      | Variable                                                                                  { $$ = newnode(Factor, 1, $1); };
+      | Function_Reference                                                                        { $$ = newnode(Factor, 1, $1); };
       | NOT Factor                                                                                { $$ = opr(NOT, 1, $2); };
-      | '(' Expression ')'                                                                        { $$ = $2; };
+      | '(' Expression ')'                                                                        { $$ = newnode(Factor, 1, $2); };
       ;
 
-Function_Reference: ID '(' ActualParameterList ')'                                                { $$ = opr(Function_Reference, 2, id($1), $3); };
+Function_Reference: ID '(' ActualParameterList ')'                                                { $$ = newnode(Function_Reference, 2, id($1), $3); };
 
-Variable: ID ComponentSelection                                                                   { $$ = opr(Variable, 2, id($1), $2); };
+Variable: ID ComponentSelection                                                                   { $$ = newnode(Variable, 2, id($1), $2); };
 
 ComponentSelection:
                   /* empty */                                                                     
-                  | '.' ID ComponentSelection                                                     { $$ = opr(ComponentSelection, 2, $2, $3); };
-                  | '[' Expression ']' ComponentSelection                                         { $$ = opr(ComponentSelection, 2, $2, $4); };
+                  | '.' ID ComponentSelection                                                     { $$ = newnode(ComponentSelection, 2, id($2), $3); };
+                  | '[' Expression ']' ComponentSelection                                         { $$ = newnode(ComponentSelection, 2, $2, $4); };
                   ;
 
 ActualParameterList:
                    /* empty */                                                                    
-                   | Expression Expression_X                                                      { $$ = opr(ActualParameterList, 2, $1, $3); };
+                   | Expression Expression_X                                                      { $$ = newnode(ActualParameterList, 2, $1, $2); };
                    ;
 Expression_X:
             /* empty */                                                                           
-            | Expression_X ',' Expression                                                         { $$ = opr(Expression_X, 2, $1, $3); };
+            | Expression_X ',' Expression                                                         { $$ = newnode(Expression_X, 2, $1, $3); };
             ;
 
-IdentifierList: ID Id_X                                                                           { $$ = opr(IdentifierList, 2, id($1), $2); };
+IdentifierList: ID Id_X                                                                           { $$ = newnode(IdentifierList, 2, id($1), $2); };
 
 Id_X:
     /* empty */                                                                                   
-    | Id_X ',' ID                                                                                 { $$ = opr(Id_X, 2, $1, id($3)); };
+    | Id_X ',' ID                                                                                 { $$ = newnode(Id_X, 2, $1, id($3)); };
     ;
 
-Sign: '+'                                                                                         { $$ = $1; };
+/* Sign: '+'                                                                                         { $$ = $1; };
     | '-'                                                                                         { $$ = $1; };
-    ;
+    ; */
 
 %%
 
@@ -259,7 +291,7 @@ nodeType *id(int i)
   size_t nodeSize;
 
   nodeSize = SIZEOF_NODETYPE + sizeof(idNodeType);
-  if ((p = malloc(nodeSize) == NULL)
+  if ((p = malloc(nodeSize)) == NULL)
     yyerror("out of memory");
 
   p->type = typeId;
@@ -267,6 +299,23 @@ nodeType *id(int i)
 
   return p;
 }
+
+/* nodeType *str(ystring ss)
+{
+  nodeType *p;
+  size_t nodeSize;
+
+  if (ss.length > STRING_LIMIT)
+    yyerror("the string is beyond limitation!");
+
+  nodeSize = SIZEOF_NODETYPE + sizeof(strNodeType);
+  if ((p = malloc(nodeSize) == NULL)
+    yyerror("out of memory");
+
+  p->type = typeStr;
+  strncpy(p->str.text, ss.text, ss.length);
+  return *p;
+} */
 
 nodeType *opr(int oper, int nops, ...)
 {
@@ -276,7 +325,7 @@ nodeType *opr(int oper, int nops, ...)
   int i;
 
   nodeSize = SIZEOF_NODETYPE + sizeof(oprNodeType) + (nops - 1) * sizeof(nodeType*);
-  if ((p = malloc(nodeSize) == NULL)
+  if ((p = malloc(nodeSize)) == NULL)
     yyerror("out of memory");
 
   p->type = typeOpr;
@@ -289,7 +338,7 @@ nodeType *opr(int oper, int nops, ...)
   return p;
 }
 
-nodeType *newnode(nodeEnum nodetype, int nops, ...)
+nodeType *newnode(constructEnum nodetype, int nops, ...)
 {
   va_list ap;
   nodeType *p;
@@ -297,7 +346,7 @@ nodeType *newnode(nodeEnum nodetype, int nops, ...)
   int i;
   
   nodeSize = SIZEOF_NODETYPE + sizeof(interNodeType) + (nops - 1) * sizeof(nodeType *);
-  if ((p = malloc(nodeSize) == NULL)
+  if ((p = malloc(nodeSize)) == NULL)
     yyerror("out of memory");
 
   p->type = typeConstruct;
@@ -305,7 +354,7 @@ nodeType *newnode(nodeEnum nodetype, int nops, ...)
   p->node.nops = nops;
   va_start(ap, nops);
   for (i = 0; i < nops; i++)
-    p->node.op[i] = va_arg(ap, nodeType*);
+    p->node.node[i] = va_arg(ap, nodeType*);
   va_end(ap);
   return p;
 }
@@ -315,7 +364,7 @@ void freeNode(nodeType *p)
   int i;
 
   if (!p) return;
-  if (p->type == tpyeOpr) {
+  if (p->type == typeOpr) {
     for (i = 0; i < p->opr.nops; i++)
       freeNode(p->opr.op[i]);
   }
@@ -323,23 +372,12 @@ void freeNode(nodeType *p)
 }
 
 
+int
 main(int argc, char **argv)
 {
-  int i = 0;
-  if (argc != 4) {
-      printf("Usage: ./parse [source file] [rules.out] [symtable.out]\n");
-      return;
-  }
   yyin = fopen(argv[1], "r");
-  rule_fp = fopen(argv[2], "w");
-  FILE *sym_fp = fopen(argv[3], "w");
   yyparse();
-  for (i = 0; i < pointer; i++) {
-    fprintf(sym_fp, "%s\n", symtab[i].name);
-  }
   fclose(yyin);
-  fclose(sym_fp);
-  fclose(rule_fp);
   return 0;
 }
 

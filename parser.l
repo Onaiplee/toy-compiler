@@ -4,10 +4,12 @@
 #include <string.h>
 #include "parser.tab.h"
 #include "parser.h"
+
 int pointer = 0;
 struct symbol symtab[NENTRY];
 int lookup(char *);
-void yyerror(char *);
+// ystring ss(char *, int);
+//void yyerror(char *);
 %}
 
 /* regular definitions */
@@ -54,7 +56,7 @@ while     {return (WHILE);}
 
 
 {WS}      {                    }
-{INT}     {yylval.iValue = stoi(yytext); return (INTEGER);}
+{INT}     {yylval.iValue = atoi(yytext); return (INTEGER);}
 {STR}     {return (STRING);}
 {ID}      {yylval.iIndex = lookup(yytext); return (ID);}
 {SYM}     {return *yytext;}
@@ -66,6 +68,15 @@ while     {return (WHILE);}
 int yywrap(void) {
     return 1;
 }
+
+/* ystring
+ss(char *text, int leng)
+{
+  ystring val;
+  val.text = text;
+  val.length = leng;
+  return val;
+} */
 
 
 int
