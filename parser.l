@@ -91,8 +91,7 @@ lookup(char *name)
   }
   strcpy(symtab[pointer].name, name);
   index = pointer++;
-  if (index != 0)
-    return index;
+  return index;
 }
 
 //main(int argc, char **argv)
