@@ -4,4 +4,4 @@ parser:	parser.l parser.y parser.h
 	gcc -o $@ parser.tab.c lex.yy.c -lfl
 
 clean:	
-	rm -rf parser lex.yy.c parser.tab.h parser.tab.c *.out
+	rm -rf parser lex.yy.c *.tab.h *.tab.c *.out
