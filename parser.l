@@ -6,10 +6,8 @@
 #include "parser.h"
 
 int pointer = 0;
-struct symbol symtab[NENTRY];
+idEntry idTab[NENTRY];
 int lookup(char *);
-// ystring ss(char *, int);
-//void yyerror(char *);
 %}
 
 /* regular definitions */
@@ -82,14 +80,8 @@ ss(char *text, int leng)
 int
 lookup(char *name)
 {
-  int i;
   int index = 0;
-  for (i = 0; i < pointer; i++) {
-    if (!strcmp(name, symtab[i].name)) {
-      return i;
-    }
-  }
-  strcpy(symtab[pointer].name, name);
+  strcpy(idTab[pointer].name, name);
   index = pointer++;
   return index;
 }

@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <assert.h>
 #include "parser.tab.h"
 #include "parser.h"
 #define YYDEBUG 1
@@ -19,9 +20,15 @@ nodeType *newnode(constructEnum nodetype, int nops, ...);
 void freeNode(nodeType *p);
 void doTask(nodeType *p, int indent);
 void i2name(constructEnum i, int indent);
+void chkVar(nodeType *p, int scope);
 void indent(int indent);
-int ex(nodeType *p);
+int setVar(nodeType *p, int scope);
+int i2type(nodeEnum i);
+int scopeTraveler(int scope, char *name);
+void doCheck(nodeType *p, int scope);
 int yylex(void);
+symbolEntry symTab[NENTRY];
+int symPointer = 0;
 
 %}
 
@@ -42,17 +49,16 @@ int yylex(void);
 %token PROCEDURE OR OF NOT PROGRAM RECORD THEN TO TYPE VAR WHILE
 %token MINUS
 
-%type <nPtr> Program TypeDefinitions TypeDefinition_X VariableDeclarations
+%type <nPtr> Program TypeDefinitions TypeDefinitionSequence VariableDeclarations
              VariableDeclarations_X SubprogramDeclarations TypeDefinition VariableDeclaration 
              ProcedureDeclaration FunctionDeclaration FormalParameterList
-             IdlistType_X Block CompoundStatement StatementSequence 
+             Block CompoundStatement StatementSequence 
              Statement SimpleStatement Assignment_Statement
              MatchedStatement Type Field_List Constant 
              Expression Simple_Expression Term Factor 
-             Variable ComponentSelection ActualParameterList Expression_X 
-             IdentifierList Id_X
+             Variable ComponentSelection ActualParameterList 
+             IdentifierList 
              ProcedureStatement ProFunDeclarationGroup
-             BlockforwardGroup 
              OpenStatement ResultType 
              Function_Reference 
 
@@ -62,18 +68,14 @@ int yylex(void);
 %%
 Program: PROGRAM ID ';' TypeDefinitions VariableDeclarations                                      
 
-                 SubprogramDeclarations CompoundStatement '.'                                     { $$ = newnode(Program, 5, id($2), $4, $5, $6, $7); doTask($$, 0);};
+                 SubprogramDeclarations CompoundStatement '.'                                     { $$ = newnode(Program, 5, id($2), $4, $5, $6, $7); doTask($$, 0); doCheck($$, -1); };
 
 
-TypeDefinitions: 
-               /* empty */                                                                        { $$ = NULL; };
-               | TYPE TypeDefinition ';' TypeDefinition_X                                         { $$ = newnode(TypeDefinitions, 2, $2, $4); };
-               ;
+TypeDefinitions: TYPE TypeDefinitionSequence                                                      { $$ = newnode(TypeDefinitions, 1, $2); };
 
-TypeDefinition_X: 
-                /* empty */                                                                       { $$ = NULL; };
-                | TypeDefinition_X TypeDefinition ';'                                             { $$ = newnode(TypeDefinition_X, 2, $1, $2); };
-                ;
+TypeDefinitionSequence: TypeDefinition ';'                                                        { $$ = $1; };
+                      | TypeDefinitionSequence TypeDefinition ';'                                 { $$ = newnode(TypeDefinitionSequence, 2, $1, $2); };
+                      ;
 
 
 VariableDeclarations:
@@ -101,23 +103,25 @@ TypeDefinition: ID '=' Type                                                     
 
 VariableDeclaration: IdentifierList ':' Type                                                      { $$ = newnode(VariableDeclaration, 2, $1, $3); };
 
-ProcedureDeclaration: PROCEDURE ID '(' FormalParameterList ')' ';' BlockforwardGroup              { $$ = newnode(ProcedureDeclaration, 3, id($2), $4, $7); };
-FunctionDeclaration: FUNCTION ID '(' FormalParameterList ')' ':' ResultType ';' BlockforwardGroup { $$ = newnode(FunctionDeclaration, 4, id($2), $4, $7, $9); };
+ProcedureDeclaration: PROCEDURE ID '(' FormalParameterList ')' ';' Block                          { $$ = newnode(ProcedureDeclaration, 3, id($2), $4, $7); };
+                    | PROCEDURE ID '(' FormalParameterList ')' ';' FORWARD                        { $$ = newnode(ProcedureDeclaration, 2, id($2), $4); };
+                    ;
 
-BlockforwardGroup: Block                                                                          { $$ = newnode(BlockforwardGroup, 1, $1); };
-                 | FORWARD                                                                        { $$ = NULL; };
-                 ;
+FunctionDeclaration: FUNCTION ID '(' FormalParameterList ')' ':' ResultType ';' Block             { $$ = newnode(FunctionDeclaration, 4, id($2), $4, $7, $9); };
+                   | FUNCTION ID '(' FormalParameterList ')' ':' ResultType ';' FORWARD           { $$ = newnode(FunctionDeclaration, 3, id($2), $4, $7); };
+
 
 
 FormalParameterList:
                    /* empty */                                                                    { $$ = NULL; };
-                   | IdentifierList ':' Type IdlistType_X                                         { $$ = newnode(FormalParameterList, 3, $1, $3, $4); };
+                   | IdentifierList ':' Type                                                      { $$ = newnode(FormalParameterList, 2, $1, $3); };
+                   | IdentifierList ':' Type ';' FormalParameterList                              { $$ = newnode(FormalParameterList, 3, $1, $3, $5); };
                    ;
 
-IdlistType_X:
-            /* empty */                                                                           { $$ = NULL; };
+/* IdlistType_X:
+             empty                                                                            { $$ = NULL; };
             | IdlistType_X ';' IdentifierList ':' Type                                            { $$ = newnode(IdlistType_X, 3, $1, $3, $5); };
-            ;
+            ; */
 
 
 Block: VariableDeclarations CompoundStatement                                                     { $$ = newnode(Block, 2, $1, $2); };
@@ -177,7 +181,8 @@ ResultType: ID                                                                  
 
 Field_List:
           /* empty */                                                                             { $$ = NULL; };
-          | IdentifierList ':' Type IdlistType_X                                                  { $$ = newnode(Field_List, 3, $1, $3, $4); };
+          | IdentifierList ':' Type /*IdlistType_X*/                                              { $$ = newnode(Field_List, 2, $1, $3); };
+          | IdentifierList ':' Type ';' Field_List                                                { $$ = newnode(Field_List, 3, $1, $3, $5); };
           ;
 
 
@@ -273,21 +278,28 @@ ComponentSelection:
                   | '[' Expression ']' ComponentSelection                                         { $$ = newnode(ComponentSelection, 2, $2, $4); };
                   ;
 
+/* ActualParameterList:
+                    empty                                                                     { $$ = NULL; };
+                   | Expression Expression_X                                                      { $$ = newnode(ActualParameterList, 2, $1, $2); };
+                   ; */
+
 ActualParameterList:
                    /* empty */                                                                    { $$ = NULL; };
-                   | Expression Expression_X                                                      { $$ = newnode(ActualParameterList, 2, $1, $2); };
+                   | Expression                                                                   { $$ = newnode(ActualParameterList, 1, $1); };
+                   | Expression ',' ActualParameterList                                           { $$ = newnode(ActualParameterList, 2, $1, $3); };
                    ;
-Expression_X:
-            /* empty */                                                                           { $$ = NULL; };
+/* Expression_X:
+             empty                                                                            { $$ = NULL; };
             | Expression_X ',' Expression                                                         { $$ = newnode(Expression_X, 2, $1, $3); };
-            ;
+            ; */
 
-IdentifierList: ID Id_X                                                                           { $$ = newnode(IdentifierList, 2, id($1), $2); };
+IdentifierList: ID                                                                                { $$ = newnode(IdentifierList, 1, id($1)); };
+              | ID ',' IdentifierList                                                             { $$ = newnode(IdentifierList, 2, id($1), $3); };
 
-Id_X:
-    /* empty */                                                                                   { $$ = NULL; }
+/* Id_X:
+     empty                                                                                    { $$ = NULL; }
     | Id_X ',' ID                                                                                 { $$ = newnode(Id_X, 2, $1, id($3)); };
-    ;
+    ; */
 
 /* Sign: '+'                                                                                         { $$ = $1; };
     | '-'                                                                                         { $$ = $1; };
@@ -365,6 +377,7 @@ nodeType *opr(int oper, int nops, ...)
   return p;
 }
 
+
 nodeType *newnode(constructEnum nodetype, int nops, ...)
 {
   va_list ap;
@@ -389,7 +402,6 @@ nodeType *newnode(constructEnum nodetype, int nops, ...)
 void freeNode(nodeType *p)
 {
   int i;
-
   if (!p) return;
   if (p->type == typeOpr) {
     for (i = 0; i < p->opr.nops; i++)
@@ -403,6 +415,140 @@ void freeNode(nodeType *p)
   free (p);
 }
 
+void
+doCheck(nodeType *p, int scope)
+{
+  int i;
+  int current_scope;
+  nodeEnum type;
+  constructEnum node_type;
+  if (!p) return;
+  if (p->type == typeConstruct) {
+    node_type = p->node.type;
+    if (node_type == VariableDeclaration) {
+      setVar(p->node.node[0], scope);
+      return;
+    }
+    else if (node_type == FormalParameterList) {
+      setVar(p->node.node[0], scope);
+      if (p->node.nops == 3)
+        doCheck(p->node.node[2], scope);
+      return;
+    }
+    else if (node_type == Assignment_Statement) {
+      chkVar(p->node.node[0], scope);
+      return;
+    }
+
+    else if (node_type == Program) {
+      current_scope = setVar(p->node.node[0], scope);
+      for (i = 1; i < p->node.nops; i++)
+        doCheck(p->node.node[i], current_scope);
+    }
+    else if (node_type == ProcedureDeclaration || node_type == FunctionDeclaration) {
+      current_scope = setVar2(p->node.node[0], scope);
+      for (i = 1; i < p->node.nops; i++)
+        doCheck(p->node.node[i], current_scope);
+    }
+    else {
+      for (i = 0; i < p->node.nops; i++)
+        doCheck(p->node.node[i], scope);
+    }
+  }
+  else {
+    return;
+  }
+}
+int
+setVar2(nodeType *p, int scope)
+{
+  int i;
+  int index;
+  if (!p) return;
+  if (p->type == typeId) {
+    for(i = 0; i < symPointer; i++) 
+      if (!strcmp(symTab[i].lexeme, idTab[p->id.i].name) && symTab[i].scope == scope) {  /* the var has been declared */
+        return -1;
+      }
+    strcpy(symTab[symPointer].lexeme, idTab[p->id.i].name);
+    symTab[symPointer].scope = scope;
+    index = symPointer++;
+    return index;
+  }
+  else {
+    //i2type(p->type);
+    assert(p->node.type == IdentifierList);
+    if (p->node.type == IdentifierList) {
+      setVar(p->node.node[0], scope);
+      setVar(p->node.node[1], scope);
+    }
+  }
+  return -2;
+}
+
+void chkVar(nodeType *p, int scope)
+{
+  int i;
+  int result;
+  assert(p->node.type == Variable);
+  result = scopeTraveler(scope, idTab[p->node.node[0]->id.i].name);
+  if (result == -1)
+    printf("Semantic Error: %s must be declared first!\n", idTab[p->node.node[0]->id.i].name);
+  return;
+}
+
+int scopeTraveler(int scope, char *name)
+{
+  int i;
+  if (scope == -1)
+    return scope;
+  for (i = 0; i < symPointer; i++) {
+    if (symTab[i].scope == scope && !strcmp(symTab[i].lexeme, name))
+      return i;
+  }
+  if (i == symPointer)
+    return scopeTraveler(symTab[scope].scope, name);
+  assert(0);
+}
+
+int
+setVar(nodeType *p, int scope)
+{
+  int i;
+  int index;
+  if (!p) return;
+  if (p->type == typeId) {
+    for(i = 0; i < symPointer; i++) 
+      if (!strcmp(symTab[i].lexeme, idTab[p->id.i].name) && symTab[i].scope == scope) {  /* the var has been declared */
+        printf("Semantic Error: %s is multi-declared!\n", idTab[p->id.i].name);
+        return -1;
+      }
+    strcpy(symTab[symPointer].lexeme, idTab[p->id.i].name);
+    symTab[symPointer].scope = scope;
+    index = symPointer++;
+    return index;
+  }
+  else {
+    //i2type(p->type);
+    assert(p->node.type == IdentifierList);
+    if (p->node.type == IdentifierList) {
+      setVar(p->node.node[0], scope);
+      setVar(p->node.node[1], scope);
+    }
+  }
+  return -2;
+}
+      
+i2type(nodeEnum i)
+{
+  switch(i) {
+    case typeCon: printf("typeCon\n"); break;
+    case typeId : printf("typeId \n"); break;
+    case typeOpr: printf("typeOpr\n"); break;
+    case typeConstruct: printf("typeConstruct\n"); break;
+    default: break;
+  }
+}   
 void
 doTask(nodeType *p, int ind)
 {
@@ -452,7 +598,7 @@ i2name(constructEnum i, int ind)
   switch(i) {
     case Program:                       indent(ind); printf("Program\n"); break;
     case TypeDefinitions:               indent(ind); printf("TypeDefinitions\n"); break;
-    case TypeDefinition_X:              indent(ind); printf("TypeDefinition_X\n"); break;
+    case TypeDefinitionSequence:        indent(ind); printf("TypeDefinitionSequence\n"); break;
     case VariableDeclarations:          indent(ind); printf("VariableDeclarations\n"); break;
     case VariableDeclarations_X:        indent(ind); printf("VariableDeclarations_X\n"); break;
     case TypeDefinition:                indent(ind); printf("TypeDefinition\n"); break;
@@ -499,6 +645,7 @@ indent(int indent)
     printf("  ");
   }
 }
+
 
 int
 main(int argc, char **argv)

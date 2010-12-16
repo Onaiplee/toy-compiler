@@ -1,5 +1,5 @@
 /* parser.h */
-#define NENTRY 100
+#define NENTRY 1000
 // #define STRING_LIMIT 10
 
 /* typedef struct {
@@ -7,10 +7,14 @@
   int length;
 } ystring; */
 
-struct symbol {
-  char name[10];
+typedef struct {
+  char name[20];
+} idEntry;
+
+typedef struct {
+  char lexeme[20];
   int scope;
-};
+} symbolEntry;
 
 typedef enum { typeCon, typeId, typeOpr, typeConstruct } nodeEnum;
 typedef enum { Program, TypeDefinitions, TypeDefinition_X, VariableDeclarations,
@@ -22,7 +26,7 @@ typedef enum { Program, TypeDefinitions, TypeDefinition_X, VariableDeclarations,
                Expression, Simple_Expression, Term, Factor, 
                Variable, ComponentSelection, ActualParameterList, Expression_X, 
                IdentifierList, Id_X, SubprogramDeclarations, ProFunDeclarationGroup,
-               Function_Reference
+               Function_Reference, TypeDefinitionSequence
 } constructEnum;
 
 typedef struct {
@@ -62,5 +66,6 @@ typedef struct nodeTypeTag {
 
 extern FILE *yyin;
 extern FILE *yyout;
-extern struct symbol symtab[NENTRY];
+extern idEntry idTab[NENTRY];
 extern int pointer;
+extern int symPointer;

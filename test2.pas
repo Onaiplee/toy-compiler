@@ -11,7 +11,7 @@ type
 	y = array[1..10] of integer;
 	s = string;
 var
-	z : s;
+  z : s;
 
 function foo1(a : integer) : r; 
 begin
