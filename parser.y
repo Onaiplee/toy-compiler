@@ -50,7 +50,7 @@ int symPointer = 0;
 %token MINUS
 
 %type <nPtr> Program TypeDefinitions TypeDefinitionSequence VariableDeclarations
-             VariableDeclarations_X SubprogramDeclarations TypeDefinition VariableDeclaration 
+             VariableDeclarationSequence SubprogramDeclarations TypeDefinition VariableDeclaration 
              ProcedureDeclaration FunctionDeclaration FormalParameterList
              Block CompoundStatement StatementSequence 
              Statement SimpleStatement Assignment_Statement
@@ -62,31 +62,30 @@ int symPointer = 0;
              OpenStatement ResultType 
              Function_Reference 
 
-
-
 %start Program
+
 %%
 Program: PROGRAM ID ';' TypeDefinitions VariableDeclarations                                      
 
                  SubprogramDeclarations CompoundStatement '.'                                     { $$ = newnode(Program, 5, id($2), $4, $5, $6, $7); doTask($$, 0); doCheck($$, -1); };
 
 
-TypeDefinitions: TYPE TypeDefinitionSequence                                                      { $$ = newnode(TypeDefinitions, 1, $2); };
+TypeDefinitions: /* empty */                                                                      { $$ = NULL; };
+               | TYPE TypeDefinitionSequence                                                      { $$ = $2; };
 
 TypeDefinitionSequence: TypeDefinition ';'                                                        { $$ = $1; };
-                      | TypeDefinitionSequence TypeDefinition ';'                                 { $$ = newnode(TypeDefinitionSequence, 2, $1, $2); };
+                      | TypeDefinition ';' TypeDefinitionSequence                                 { $$ = newnode(TypeDefinitionSequence, 2, $1, $3); };
                       ;
 
 
 VariableDeclarations:
                     /* empty */                                                                   { $$ = NULL; };
-                    | VAR VariableDeclaration ';' VariableDeclarations_X                          { $$ = newnode(VariableDeclarations, 2, $2, $4); };
+                    | VAR VariableDeclarationSequence                                             { $$ = $2; };
+                    ;
 
-VariableDeclarations_X:
-                     /* empty */                                                                  { $$ = NULL; };
-                     | VariableDeclarations_X VariableDeclaration ';'                             { $$ = newnode(VariableDeclarations_X, 2, $1, $2); };
-                     ;
-
+VariableDeclarationSequence: VariableDeclaration ';'                                              { $$ = $1; };
+                           | VariableDeclaration ';' VariableDeclarationSequence                  { $$ = newnode(VariableDeclarationSequence, 2, $1, $3); };
+                           ;
 
 SubprogramDeclarations:
                       /* empty */                                                                 { $$ = NULL; };
@@ -118,28 +117,16 @@ FormalParameterList:
                    | IdentifierList ':' Type ';' FormalParameterList                              { $$ = newnode(FormalParameterList, 3, $1, $3, $5); };
                    ;
 
-/* IdlistType_X:
-             empty                                                                            { $$ = NULL; };
-            | IdlistType_X ';' IdentifierList ':' Type                                            { $$ = newnode(IdlistType_X, 3, $1, $3, $5); };
-            ; */
-
 
 Block: VariableDeclarations CompoundStatement                                                     { $$ = newnode(Block, 2, $1, $2); };
 
 
 CompoundStatement: begin StatementSequence END                                                    { $$ = newnode(CompoundStatement, 1, $2); };
 
-/* StatementSequence: Statement StatementSequence_X                                                  { $$ = newnode(StatementSequence, 2, $1, $2); }; */
 
 StatementSequence: Statement                                                                      { $$ = newnode(StatementSequence, 1, $1); };
                  | Statement ';' StatementSequence                                                { $$ = newnode(StatementSequence, 2, $1, $3); };
                  ;
-
-/* StatementSequence_X:
-                   * empty                                                                     { $$ = NULL; };
-                   | StatementSequence_X ';' Statement                                            { $$ = newnode(StatementSequence_X, 2, $1, $3); };
-                   ; */
-
 
 Statement: OpenStatement                                                                          { $$ = newnode(Statement, 1, $1); };
          | MatchedStatement                                                                       { $$ = newnode(Statement, 1, $1); };
@@ -181,7 +168,7 @@ ResultType: ID                                                                  
 
 Field_List:
           /* empty */                                                                             { $$ = NULL; };
-          | IdentifierList ':' Type /*IdlistType_X*/                                              { $$ = newnode(Field_List, 2, $1, $3); };
+          | IdentifierList ':' Type                                                               { $$ = newnode(Field_List, 2, $1, $3); };
           | IdentifierList ':' Type ';' Field_List                                                { $$ = newnode(Field_List, 3, $1, $3, $5); };
           ;
 
@@ -200,65 +187,24 @@ Expression: Simple_Expression                                                   
           | Simple_Expression '=' Simple_Expression                                               { $$ = opr('=', 2, $1, $3); };
           ;
 
-/*Relational_Op: '<'                                                                              { $$ = $1; }; 
-             | LT                                                                                 { $$ = $1; }; 
-             | '>'                                                                                { $$ = $1; }; 
-             | GT                                                                                 { $$ = $1; };
-             | NE                                                                                 { $$ = $1; };
-             | '='                                                                                { $$ = $1; };
-             ; */
-
-Simple_Expression: Term                                                                                     { $$ = newnode(Simple_Expression, 1, $1); };
-                 | Term '+' Simple_Expression                                                               { $$ = opr('+', 2, $1, $3); };
-                 | Term '-' Simple_Expression                                                               { $$ = opr('-', 2, $1, $3); };
-                 | Term OR  Simple_Expression                                                               { $$ = opr(OR , 2, $1, $3); };
-                 | '+' Term '+' Simple_Expression                                                           { $$ = opr('+', 2, $2, $4); };
-                 | '+' Term '-' Simple_Expression                                                           { $$ = opr('-', 2, $2, $4); };
-                 | '+' Term OR  Simple_Expression                                                           { $$ = opr(OR,  2, $2, $4); };
-                 | '-' Term '+' Simple_Expression                                                           { $$ = opr(MINUS, 1, opr('+', 2, $2, $4)); };
-                 | '-' Term '-' Simple_Expression                                                           { $$ = opr(MINUS, 1, opr('-', 2, $2, $4)); };
-                 | '-' Term OR  Simple_Expression                                                           { $$ = opr(MINUS, 1, opr(OR,  2, $2, $4)); };
+Simple_Expression: Term                                                                           { $$ = newnode(Simple_Expression, 1, $1); };
+                 | Term '+' Simple_Expression                                                     { $$ = opr('+', 2, $1, $3); };
+                 | Term '-' Simple_Expression                                                     { $$ = opr('-', 2, $1, $3); };
+                 | Term OR  Simple_Expression                                                     { $$ = opr(OR , 2, $1, $3); };
+                 | '+' Term '+' Simple_Expression                                                 { $$ = opr('+', 2, $2, $4); };
+                 | '+' Term '-' Simple_Expression                                                 { $$ = opr('-', 2, $2, $4); };
+                 | '+' Term OR  Simple_Expression                                                 { $$ = opr(OR,  2, $2, $4); };
+                 | '-' Term '+' Simple_Expression                                                 { $$ = opr(MINUS, 1, opr('+', 2, $2, $4)); };
+                 | '-' Term '-' Simple_Expression                                                 { $$ = opr(MINUS, 1, opr('-', 2, $2, $4)); };
+                 | '-' Term OR  Simple_Expression                                                 { $$ = opr(MINUS, 1, opr(OR,  2, $2, $4)); };
                  ; 
 
-/* Simple_Expression: Term                                                                                     { $$ = newnode(Simple_Expression, 1, $1); };
-                 | Simple_Expression '+' Term                                                               { $$ = opr('+', 2, $1, $3); };
-                 | Simple_Expression '-' Term                                                               { $$ = opr('-', 2, $1, $3); };
-                 | Simple_Expression OR  Term                                                               { $$ = opr(OR , 2, $1, $3); };
-                 | '+' Simple_Expression '+' Term                                                           { $$ = opr('+', 2, $2, $4); };
-                 | '+' Simple_Expression '-' Term                                                           { $$ = opr('-', 2, $2, $4); };
-                 | '+' Simple_Expression OR  Term                                                           { $$ = opr(OR,  2, $2, $4); };
-                 | '-' Simple_Expression '+' Term                                                           { $$ = opr(MINUS, 1, opr('+', 2, $2, $4)); };
-                 | '-' Simple_Expression '-' Term                                                           { $$ = opr(MINUS, 1, opr('-', 2, $2, $4)); };
-                 | '-' Simple_Expression OR  Term                                                           { $$ = opr(MINUS, 1, opr(OR,  2, $2, $4)); };
-                 ; */
-
-
-
-/* AddOp: '+'                                                                                     { $$ = $1; };
-     | '-'                                                                                        { $$ = $1; };
-     | OR                                                                                         { $$ = $1; };
-     ; */
-
-Term: Factor                                                                                                { $$ = newnode(Term, 1, $1); };
-    | Factor '*' Term                                                                                       { $$ = opr('*', 2, $1, $3); };
-    | Factor DIV Term                                                                                       { $$ = opr(DIV, 2, $1, $3); };
-    | Factor MOD Term                                                                                       { $$ = opr(MOD, 2, $1, $3); };
-    | Factor AND Term                                                                                       { $$ = opr(AND, 2, $1, $3); };
+Term: Factor                                                                                      { $$ = newnode(Term, 1, $1); };
+    | Factor '*' Term                                                                             { $$ = opr('*', 2, $1, $3); };
+    | Factor DIV Term                                                                             { $$ = opr(DIV, 2, $1, $3); };
+    | Factor MOD Term                                                                             { $$ = opr(MOD, 2, $1, $3); };
+    | Factor AND Term                                                                             { $$ = opr(AND, 2, $1, $3); };
     ;
-
-/* MulOpFactor_X:
-              empty                                                                           { $$ = NULL; };
-             | MulOpFactor_X '*' Factor                                                           { $$ = opr('*', 2, $1, $3); };
-             | MulOpFactor_X DIV Factor                                                           { $$ = opr(DIV, 2, $1, $3); };
-             | MulOpFactor_X MOD Factor                                                           { $$ = opr(MOD, 2, $1, $3); };
-             | MulOpFactor_X AND Factor                                                           { $$ = opr(AND, 2, $1, $3); };
-             ; */
-
-/* MulOp: '*'                                                                                        { $$ = $1; }; 
-     | DIV                                                                                        { $$ = $1; }; 
-     | MOD                                                                                        { $$ = $1; };
-     | AND                                                                                        { $$ = $1; };
-     ; */
 
 Factor: INTEGER                                                                                   { $$ = con($1); };
       | STRING                                                                                    { $$ = NULL; };
@@ -278,32 +224,15 @@ ComponentSelection:
                   | '[' Expression ']' ComponentSelection                                         { $$ = newnode(ComponentSelection, 2, $2, $4); };
                   ;
 
-/* ActualParameterList:
-                    empty                                                                     { $$ = NULL; };
-                   | Expression Expression_X                                                      { $$ = newnode(ActualParameterList, 2, $1, $2); };
-                   ; */
-
 ActualParameterList:
                    /* empty */                                                                    { $$ = NULL; };
                    | Expression                                                                   { $$ = newnode(ActualParameterList, 1, $1); };
                    | Expression ',' ActualParameterList                                           { $$ = newnode(ActualParameterList, 2, $1, $3); };
                    ;
-/* Expression_X:
-             empty                                                                            { $$ = NULL; };
-            | Expression_X ',' Expression                                                         { $$ = newnode(Expression_X, 2, $1, $3); };
-            ; */
 
 IdentifierList: ID                                                                                { $$ = newnode(IdentifierList, 1, id($1)); };
               | ID ',' IdentifierList                                                             { $$ = newnode(IdentifierList, 2, id($1), $3); };
 
-/* Id_X:
-     empty                                                                                    { $$ = NULL; }
-    | Id_X ',' ID                                                                                 { $$ = newnode(Id_X, 2, $1, id($3)); };
-    ; */
-
-/* Sign: '+'                                                                                         { $$ = $1; };
-    | '-'                                                                                         { $$ = $1; };
-    ; */
 
 %%
 
@@ -633,6 +562,8 @@ i2name(constructEnum i, int ind)
     case SubprogramDeclarations:        indent(ind); printf("SubprogramDeclarations\n"); break;
     case ProFunDeclarationGroup:        indent(ind); printf("ProFunDeclarationGroup\n"); break;
     case Function_Reference:            indent(ind); printf("Function_Reference\n"); break;
+    case VariableDeclarationSequence:   indent(ind); printf("VariableDeclarationSequence\n"); break;
+    default:                            break;
   }
 
 }

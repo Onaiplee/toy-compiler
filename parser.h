@@ -26,7 +26,7 @@ typedef enum { Program, TypeDefinitions, TypeDefinition_X, VariableDeclarations,
                Expression, Simple_Expression, Term, Factor, 
                Variable, ComponentSelection, ActualParameterList, Expression_X, 
                IdentifierList, Id_X, SubprogramDeclarations, ProFunDeclarationGroup,
-               Function_Reference, TypeDefinitionSequence
+               Function_Reference, TypeDefinitionSequence, VariableDeclarationSequence
 } constructEnum;
 
 typedef struct {
